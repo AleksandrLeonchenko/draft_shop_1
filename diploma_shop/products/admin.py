@@ -59,22 +59,9 @@ class ProductInstanceAdmin(admin.ModelAdmin):
         'category',
         'ogr_tirag',
     )
-    # list_editable = ('available', 'archived')
     list_filter = ('available', 'date')
     prepopulated_fields = {"slug": ("title",)}
     search_fields = ['id', 'title']
-    # fields = (
-    #     'name',
-    #     'slug',
-    #     'price',
-    #     'discount',
-    #     'stock',
-    #     'description',
-    #     'get_html_image',
-    #     'available',
-    #     'created',
-    #     'updated'
-    # )
     readonly_fields = ('date', 'updated_date', 'get_html_image')
     ordering = ['date']
     save_on_top = True
@@ -91,9 +78,9 @@ class ProductInstanceAdmin(admin.ModelAdmin):
     #     return obj.description[:48] + "..."
 
     def description_short(self, object) -> str:
-        if len(object.description) < 10:
+        if len(object.description) < 15:
             return object.description
-        return object.description[:10] + "..."
+        return object.description[:15] + "..."
 
 
 class PropertyTypeProductAdmin(admin.ModelAdmin):
