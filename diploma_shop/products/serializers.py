@@ -697,7 +697,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class ProfileSerializer(serializers.ModelSerializer):
     """
-    ИИ 4, email обновляется, но фронтом не отображается и аватар нужно обязятельно при обновлении загружать
+    email обновляется, но фронтом не отображается и аватар нужно обязятельно при обновлении загружать
     """
     email = serializers.EmailField(source='user.email', allow_null=True, allow_blank=True) #email не обновляется, но фронтом отображается
     # email = serializers.EmailField(allow_null=True, allow_blank=True) #email обновляется, но фронтом не отображается
@@ -741,7 +741,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 class SignUpSerializer(serializers.Serializer):
     """
-    Регистрация ии 2, работает в рест, не работает во фронте, возможно 'name' это не 'fullName'
+    Регистрация, работает в рест, не работает во фронте, возможно 'name' это не 'fullName'
     """
     name = serializers.CharField(source='fullName', max_length=50)
     username = serializers.CharField(max_length=50)
