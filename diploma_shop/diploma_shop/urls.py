@@ -22,11 +22,16 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("", include("frontend.urls")),
+    path('', include("frontend.urls")),
     path('api-auth/', include('rest_framework.urls')),
+    path('auth/', include('djoser.urls')),
+    path('auth/', include('djoser.urls.authtoken')),
+    path('auth/', include('djoser.urls.jwt')),
     path('ckeditor/', include('ckeditor_uploader.urls')),
-    path("api/v1/", include('products.urls')),
-    path("products/", include('products.urls')),
+    path("api/", include('products.urls')),
+    # path("products/", include('products.urls')),
+    # path('api/sign-in/', include('rest_framework.urls')),
+    # path('api/', include(('products.urls', 'products'), namespace='products')),
 ]
 
 if settings.DEBUG:

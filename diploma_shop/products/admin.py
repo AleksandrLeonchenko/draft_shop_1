@@ -11,8 +11,8 @@ from .models import *
 
 
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'description']
-    list_display_links = ['id', 'title', 'description']
+    list_display = ['id', 'title', 'description', 'parent']
+    list_display_links = ['id', 'title', 'description', 'parent']
     search_fields = ['id', 'title']
     save_on_top = True
 
@@ -35,7 +35,7 @@ class ProductInstanceAdmin(admin.ModelAdmin):
         'id',
         'title',
         'item_number',
-        'free_delivery',
+        'freeDelivery',
         'price',
         'count',
         'available',
@@ -43,13 +43,13 @@ class ProductInstanceAdmin(admin.ModelAdmin):
         'updated_date',
         'archived',
         'category',
-        'ogr_tirag',
+        # 'limited_quantity',
     )
     list_display_links = (
         'id',
         'title',
         'item_number',
-        'free_delivery',
+        'freeDelivery',
         'price',
         'count',
         'available',
@@ -57,7 +57,7 @@ class ProductInstanceAdmin(admin.ModelAdmin):
         'updated_date',
         'archived',
         'category',
-        'ogr_tirag',
+        # 'limited_quantity',
     )
     list_filter = ('available', 'date')
     prepopulated_fields = {"slug": ("title",)}
@@ -99,10 +99,25 @@ class PropertyInstanceProductAdmin(admin.ModelAdmin):
     ordering = ['product']
 
 
-class ImagesAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'src', 'alt', 'product', 'category')
-    list_display_links = ('id', 'title', 'src', 'alt', 'product', 'category')
-    search_fields = ('title',)
+class ProductImagesAdmin(admin.ModelAdmin):
+    list_display = ('id', 'alt', 'src', 'product')
+    list_display_links = ('id', 'alt', 'src', 'product')
+    search_fields = ('alt',)
+
+
+class CategoryImagesAdmin(admin.ModelAdmin):
+    list_display = ('id', 'alt', 'src')
+    list_display_links = ('id', 'alt', 'src')
+    search_fields = ('alt',)
+
+
+class AvatarsImagesAdmin(admin.ModelAdmin):
+    # list_display = ('id', 'title', 'src')
+    # list_display_links = ('id', 'title', 'src')
+    # search_fields = ('title',)
+    list_display = ('id', 'alt', 'src')
+    list_display_links = ('id', 'alt', 'src')
+    search_fields = ('alt',)
 
 
 class ReviewAdmin(admin.ModelAdmin):
@@ -138,14 +153,12 @@ class ProfileAdmin(admin.ModelAdmin):
         'id',
         'user',
         'fullName',
-        'email',
         'phone',
     ]
     list_display_links = [
         'id',
         'user',
         'fullName',
-        'email',
         'phone',
     ]
     search_fields = ['id', 'user']
@@ -153,7 +166,7 @@ class ProfileAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("user",)}
 
 
-class TagsAdmin(admin.ModelAdmin):
+class TagAdmin(admin.ModelAdmin):
     list_display = ['id', 'name']
     list_display_links = ['id', 'name']
     search_fields = ['id']
@@ -174,24 +187,24 @@ class RateAdmin(admin.ModelAdmin):
     # prepopulated_fields = {"slug": ("value",)}
 
 
-class RatingAdmin(admin.ModelAdmin):
-    list_display = [
-        'id',
-        'rating_value',
-        'product',
-        'ip',
-        'author',
-    ]
-    list_display_links = [
-        'id',
-        'rating_value',
-        'product',
-        'ip',
-        'author',
-    ]
-    search_fields = ['id', 'rating_value']
-    ordering = ['id']
-    # prepopulated_fields = {"slug": ("rating_value",)}
+# class RatingAdmin(admin.ModelAdmin):
+#     list_display = [
+#         'id',
+#         'rating_value',
+#         'product',
+#         'ip',
+#         'author',
+#     ]
+#     list_display_links = [
+#         'id',
+#         'rating_value',
+#         'product',
+#         'ip',
+#         'author',
+#     ]
+#     search_fields = ['id', 'rating_value']
+#     ordering = ['id']
+#     # prepopulated_fields = {"slug": ("rating_value",)}
 
 
 class PurchaseListAdmin(admin.ModelAdmin):
@@ -261,13 +274,14 @@ admin.site.register(Category, CategoryAdmin)
 admin.site.register(ProductInstance, ProductInstanceAdmin)
 admin.site.register(PropertyTypeProduct, PropertyTypeProductAdmin)
 admin.site.register(PropertyInstanceProduct, PropertyInstanceProductAdmin)
-admin.site.register(Images, ImagesAdmin)
+admin.site.register(ProductImages, ProductImagesAdmin)
+admin.site.register(CategoryImages, CategoryImagesAdmin)
+admin.site.register(AvatarsImages, AvatarsImagesAdmin)
 admin.site.register(Review, ReviewAdmin)
 admin.site.register(Profile, ProfileAdmin)
 admin.site.register(PurchaseList, PurchaseListAdmin)
-admin.site.register(Tags, TagsAdmin)
+admin.site.register(Tag, TagAdmin)
 admin.site.register(Rate, RateAdmin)
-admin.site.register(Rating, RatingAdmin)
 admin.site.register(Order, OrderAdmin)
 admin.site.register(OrderItem, OrderItemAdmin)
 

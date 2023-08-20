@@ -1,4 +1,9 @@
+# from datetime import datetime
+import datetime
+
+from autoslug import AutoSlugField
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.contrib.auth.context_processors import auth
@@ -19,12 +24,20 @@ class Category(models.Model):
     title = models.CharField(max_length=200, db_index=True, verbose_name='Название категории продукта')
     description = models.TextField(blank=True, verbose_name='Описание категории продукта')
     # slug = models.SlugField(max_length=200, db_index=True, unique=True, verbose_name='URL категории продукта')
-    thumbnail = models.ImageField(
+    # thumbnail = models.ImageField(
+    #     blank=True,
+    #     upload_to='images/thumbnails/',
+    #     default='images/no_image.jpg',
+    #     validators=[FileExtensionValidator(allowed_extensions=('png', 'jpg', 'webp', 'jpeg', 'gif'))],
+    #     verbose_name='Превью категории продукта'
+    # )
+    image = models.ForeignKey(
+        'CategoryImages',
+        on_delete=models.SET_NULL,
         blank=True,
-        upload_to='images/thumbnails/',
-        default='images/no_image.jpg',
-        validators=[FileExtensionValidator(allowed_extensions=('png', 'jpg', 'webp', 'jpeg', 'gif'))],
-        verbose_name='Превью категории продукта'
+        null=True,
+        related_name="image",
+        verbose_name='Изображение категории'
     )
     parent = models.ForeignKey(
         'self',
@@ -36,7 +49,7 @@ class Category(models.Model):
     )
 
     class Meta:
-        ordering = ('title',)
+        ordering = ('id',)
         verbose_name = 'Категория продукта'
         verbose_name_plural = 'Категории продукта'
 
@@ -83,8 +96,13 @@ class ProductInstance(models.Model):
     slug = models.SlugField(max_length=200, unique=True, db_index=True, verbose_name='URL продукта')
     item_number = models.IntegerField(default=True, verbose_name='Артикул продукта')
     description = models.TextField(blank=True, max_length=500, verbose_name='Краткое описание продукта')
-    full_description = models.TextField(blank=True, verbose_name='Полное описание продукта')
-    free_delivery = models.BooleanField(default=False, verbose_name='free delivery')
+    fullDescription = models.TextField(blank=True, verbose_name='Полное описание продукта')
+    freeDelivery = models.BooleanField(default=False, verbose_name='free delivery')
+
+    sort_index = models.PositiveIntegerField(default=True, verbose_name='Индекс сортировки')
+    number_of_purchases = models.PositiveIntegerField(default=True, verbose_name='Количество покупок')
+    limited_edition = models.BooleanField(default=False, null=True, verbose_name='Ограниченный тираж')
+
     price = models.DecimalField(
         null=True,
         blank=True,
@@ -92,23 +110,35 @@ class ProductInstance(models.Model):
         decimal_places=2,
         verbose_name='Цена продукта'
     )
-    thumbnail = models.ImageField(
+    salePrice = models.DecimalField(
+        null=True,
         blank=True,
-        upload_to='images/thumbnails/',
-        default='images/no_image.jpg',
-        validators=[FileExtensionValidator(allowed_extensions=('png', 'jpg', 'webp', 'jpeg', 'gif'))],
-        verbose_name='Превью продукта'
+        default=0,
+        max_digits=10,
+        decimal_places=2,
+        verbose_name='Цена продукта при распродаже'
     )
+    # thumbnail = models.ImageField(
+    #     blank=True,
+    #     upload_to='images/thumbnails/',
+    #     default='images/no_image.jpg',
+    #     validators=[FileExtensionValidator(allowed_extensions=('png', 'jpg', 'webp', 'jpeg', 'gif'))],
+    #     verbose_name='Превью продукта'
+    # )
     count = models.PositiveIntegerField(null=True, blank=True, verbose_name='Количество продукта на складе')
     available = models.BooleanField(default=True, null=True, verbose_name='Доступность продукта в каталоге')
-    ogr_tirag = models.BooleanField(default=False, null=True, verbose_name='Ограниченный тираж')
+
     date = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания продукта')
     updated_date = models.DateTimeField(auto_now=True, verbose_name='Дата изменения продукта')
+
+    dateFrom = models.DateTimeField(default=timezone.now, verbose_name='Дата начала распродажи продукта')
+    dateTo = models.DateTimeField(default=timezone.now, verbose_name='Дата окончания распродажи продукта')
+
     archived = models.BooleanField(default=True, verbose_name='Продукт архивирован')
     tags = models.ManyToManyField(
-        'Tags',
-        related_name='product_tags',
-        verbose_name='Тэги продукта'
+        'Tag',
+        related_name='tag',
+        verbose_name='Теги продукта'
     )
     category = models.ForeignKey(
         'Category',
@@ -117,12 +147,7 @@ class ProductInstance(models.Model):
         related_name="product_category",
         verbose_name="Категория продукта",
     )
-    # rating = models.IntegerField(
-    #     default=True,
-    #     null=True,
-    #     blank=True,
-    #     verbose_name='Рейтинг продукта'
-    # )
+
     rating = models.DecimalField(
         null=True,
         blank=True,
@@ -130,50 +155,6 @@ class ProductInstance(models.Model):
         decimal_places=1,
         verbose_name='Рейтинг продукта'
     )
-
-    # images = models.ForeignKey(
-    #     'ProductImages',
-    #     on_delete=models.PROTECT,
-    #     default=True,
-    #     related_name='images_product',
-    #     verbose_name='Изображения продукта'
-    # )
-
-    # discount = models.DecimalField(
-    #     null=True,
-    #     blank=True,
-    #     max_digits=10,
-    #     decimal_places=2,
-    #     verbose_name=_('product price discount')
-    # )
-
-    # product_type = models.ForeignKey(
-    #     'ProductType',
-    #     on_delete=models.PROTECT,
-    #     default=True,
-    #     related_name='product_type',
-    #     verbose_name=_('type of product')
-    # )
-
-    # manufacturer = models.ForeignKey(
-    #     'Manufacturer',
-    #     default=None,
-    #     null=True,
-    #     blank=True,
-    #     on_delete=models.CASCADE,
-    #     related_name='shop_product_shop',
-    #     verbose_name=_('seller')
-    # )
-
-    # promotion = models.ForeignKey(
-    #     'PromotionProduct',
-    #     default=None,
-    #     null=True,
-    #     blank=True,
-    #     on_delete=models.PROTECT,
-    #     related_name='shop_promotion_product_instance',
-    #     verbose_name=_('promotion')
-    # )
 
     def __str__(self):
         return self.title
@@ -189,7 +170,6 @@ class ProductInstance(models.Model):
         ordering = ('title',)
         verbose_name = 'Продукт'
         verbose_name_plural = 'Продукты'
-        # index_together = (('id', 'slug'),)
         indexes = [models.Index(fields=['id', 'slug'])]
 
 
@@ -266,34 +246,17 @@ class PropertyInstanceProduct(models.Model):
         return self.value
 
 
-# class PromotionProduct(models.Model):
-#     """
-#     Модель акций для продуктов магазина
-#     """
-#     name = models.CharField(max_length=200, db_index=True, verbose_name=_('promotion name for the product'))
-#     slug = models.SlugField(max_length=200, db_index=True, unique=True, verbose_name=_('promotion URL for the product'))
-#     content = models.TextField(blank=True, verbose_name=_('promotion description for the product'))
-#
-#     class Meta:
-#         ordering = ('name',)
-#         verbose_name = _('promotion for a product')
-#         verbose_name_plural = _('promotions for a product')
-#
-#     def __str__(self):
-#         return self.name
-
-
-class Images(models.Model):
+class ProductImages(models.Model):
     """
     Модель изображения для магазина
     """
-    title = models.CharField(
-        max_length=150,
-        blank=True,
-        null=True,
-        default=None,
-        verbose_name='Описание изображения'
-    )
+    # title = models.CharField(
+    #     max_length=150,
+    #     blank=True,
+    #     null=True,
+    #     default=None,
+    #     verbose_name='Описание изображения'
+    # )
     src = models.ImageField(
         upload_to='images/images_product/',
         default='images/no_image.jpg',
@@ -317,29 +280,20 @@ class Images(models.Model):
         related_name='images',
         verbose_name='Продукт'
     )
-    category = models.ForeignKey(
-        'Category',
-        on_delete=models.CASCADE,
-        default=None,
-        null=True,
-        blank=True,
-        related_name='image',
-        verbose_name='Категория'
-    )
 
     def __str__(self):
         return f'{self.product}'
 
     class Meta:
-        verbose_name = 'Изображение'
-        verbose_name_plural = 'Изображения'
+        verbose_name = 'Изображение продукта'
+        verbose_name_plural = 'Изображения продуктов'
 
     @property
     def photo_url(self):
         if self.src and hasattr(self.src, 'url'):
             return self.src.url
 
-    def save(self):
+    def save(self, *args, **kwargs):
         super().save()
         img = Image.open(self.src.path)
         if img.height > 300 or img.width > 300:
@@ -348,96 +302,110 @@ class Images(models.Model):
             img.save(self.src.path)
 
 
-# class Review(models.Model):
-#     """
-#     Модель отзывов к продуктам
-#     """
-#     email = models.EmailField(verbose_name='E_MAIL')
-#     name = models.CharField(
-#         max_length=150,
-#         blank=True,
-#         null=True,
-#         default=None,
-#         verbose_name='Имя автора отзыва'
-#     )
-#     text = models.TextField(blank=True, max_length=5000, verbose_name='Текст отзыва')
-#     time_create = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания отзыва')
-#     time_update = models.DateTimeField(auto_now=True, verbose_name='Дата изменения отзыва')
-#     product = models.ForeignKey(
-#         'ProductInstance',
-#         default=None,
-#         null=True,
-#         blank=True,
-#         on_delete=models.CASCADE,
-#         related_name='reviews_product',
-#         verbose_name='Продукт'
-#     )
-#     parent = models.ForeignKey(
-#         'self',
-#         on_delete=models.SET_NULL,
-#         blank=True,
-#         null=True,
-#         # related_name="reviews_parent",
-#         related_name="children",
-#         verbose_name='Родительский отзыв'
-#     )
-#     # author = models.ForeignKey(
-#     #     # User,
-#     #     to=User,
-#     #     default=None,
-#     #     null=True,
-#     #     blank=True,
-#     #     verbose_name='Автор отзыва',
-#     #     related_name='review_author',
-#     #     on_delete=models.CASCADE
-#     # )
-#     active = models.BooleanField(default=True, verbose_name='Активный')
-#
-#     def __str__(self):
-#         return f'{self.name} - {self.product}'
-#         # return 'Comment by {} on {}'.format(self.name, self.post)
-#
-#     class Meta:
-#         verbose_name = 'Отзыв к продукту'
-#         verbose_name_plural = 'Отзывы к продукту'
-#         ordering = ('-time_create',)
-
-class Rating(models.Model):
+class CategoryImages(models.Model):
     """
-    Рейтинг продукта
+    Модель изображения для магазина
     """
-    ip = models.CharField("IP адрес", max_length=15)
-    rating_value = models.ForeignKey(
-        'Rate',
-        on_delete=models.CASCADE,
-        related_name="rate_rating",
-        verbose_name='Значение рейтинга'
-    )
-    product = models.ForeignKey(
-        'ProductInstance',
-        on_delete=models.CASCADE,
-        related_name="product_rating",
-        verbose_name='Продукт'
-    )
-    author = models.ForeignKey(
-        # User,
-        to=User,
-        on_delete=models.CASCADE,
-        default=None,
-        null=True,
+    # title = models.CharField(
+    #     max_length=150,
+    #     blank=True,
+    #     null=True,
+    #     default=None,
+    #     verbose_name='Описание изображения'
+    # )
+    src = models.ImageField(
+        upload_to='images/images_product/',
+        default='images/no_image.jpg',
         blank=True,
-        related_name='author_rating',
-        verbose_name='Автор рейтинга'
+        null=True,
+        verbose_name='Изображение'
     )
-
-    class Meta:
-        ordering = ('id',)
-        verbose_name = 'Рейтинг'
-        verbose_name_plural = 'Рейтинги'
+    alt = models.CharField(
+        max_length=150,
+        blank=True,
+        null=True,
+        default=None,
+        verbose_name='Альтернативная строка изображения продукта'
+    )
 
     def __str__(self):
-        # return f'{self.rating_value} - {self.product}'
-        return f'{self.rating_value}'
+        return f'{self.alt}'
+
+    class Meta:
+        verbose_name = 'Изображение категории'
+        verbose_name_plural = 'Изображения категорий'
+
+    @property
+    def photo_url(self):
+        if self.src and hasattr(self.src, 'url'):
+            return self.src.url
+
+    def save(self, *args, **kwargs):
+        super().save()
+        img = Image.open(self.src.path)
+        if img.height > 25 or img.width > 25:
+            output_size = (25, 25)
+            img.thumbnail(output_size)
+            img.save(self.src.path)
+
+
+class AvatarsImages(models.Model):
+    """
+    Модель изображения для аватарок
+    """
+    src = models.ImageField(
+        upload_to='images/images_avatars/',
+        default='images/no_image.jpg',
+        blank=True,
+        null=True,
+        verbose_name='Изображение'
+    )
+    # alt = models.CharField(max_length=255, null=True, blank=True)
+    # title = models.CharField(
+    #     max_length=150,
+    #     blank=True,
+    #     null=True,
+    #     default=None,
+    #     verbose_name='Описание изображения'
+    # )
+    # src = models.ImageField(
+    #     upload_to='images/images_avatars/',
+    #     default='images/no_image.jpg',
+    #     blank=True,
+    #     null=True,
+    #     verbose_name='Изображение'
+    # )
+    alt = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        verbose_name='Альтернативная строка изображения аватара'
+    )
+
+    def __str__(self):
+        return f'{self.alt}'
+
+    class Meta:
+        verbose_name = 'Изображение аватара'
+        verbose_name_plural = 'Изображения аватара'
+
+    @property
+    def photo_url(self):
+        if self.src and hasattr(self.src, 'url'):
+            return self.src.url
+
+    def save(self, *args, **kwargs):
+        super().save()
+        img = Image.open(self.src.path)
+        if img.height > 50 or img.width > 50:
+            output_size = (50, 50)
+            img.thumbnail(output_size)
+            img.save(self.src.path)
+        # Проверка размера изображения
+        MAX_SIZE = 2 * 1024 * 1024  # 2 МБ
+        if self.src.size > MAX_SIZE:
+            raise ValidationError('Размер изображения должен быть не более 2 МБ.')
 
 
 class Rate(models.Model):
@@ -463,40 +431,25 @@ class Review(models.Model):
     """
     Модель отзывов к продуктам
     """
-    # email = models.EmailField(verbose_name='Email автора отзыва')
-    # author = models.CharField(
-    #     max_length=150,
-    #     blank=True,
-    #     null=True,
-    #     default=None,
-    #     verbose_name='Автор отзыва'
-    # )
+
     author = models.ForeignKey(
         # User,
         to=User,
         on_delete=models.CASCADE,
         default=None,
-        null=True,
-        blank=True,
+        # null=True,
+        # blank=True,
         related_name='author_review',
         verbose_name='Автор отзыва'
     )
-    # ip = models.CharField("IP адрес", max_length=15)
-    # rate = models.ForeignKey(
-    #     'Rating',
-    #     on_delete=models.CASCADE,
-    #     default=1,
-    #     related_name="rate_review",
-    #     verbose_name='Значение рейтинга'
-    # )
-    # rate = models.IntegerField(
-    #     blank=True,
-    #     null=True,
-    #     default=True,
-    #     verbose_name='Значение рейтинга'
-    # )
-    rate = models.SmallIntegerField(
-        default=0,
+
+    rate = models.ForeignKey(
+        'Rate',
+        on_delete=models.CASCADE,
+        default=None,
+        null=True,
+        blank=True,
+        related_name="review",
         verbose_name='Значение рейтинга'
     )
     text = models.TextField(blank=True, max_length=5000, verbose_name='Текст отзыва')
@@ -505,8 +458,8 @@ class Review(models.Model):
     product = models.ForeignKey(
         'ProductInstance',
         default=None,
-        null=True,
-        blank=True,
+        # null=True,
+        # blank=True,
         on_delete=models.CASCADE,
         # related_name='product_review',
         related_name='reviews',
@@ -533,9 +486,9 @@ class Review(models.Model):
         ordering = ('-date',)
 
 
-class Tags(models.Model):
+class Tag(models.Model):
     """
-    Рейтинг продукта
+    Тег продукта
     """
     name = models.CharField(
         max_length=150,
@@ -565,23 +518,40 @@ class Profile(models.Model):
         related_name='shop_profile_user',
         verbose_name='Пользователь'
     )
-    slug = models.SlugField(max_length=255, unique=True, db_index=True, verbose_name='URL пользователя')
+    # slug = models.SlugField(max_length=255, unique=True, db_index=True, verbose_name='URL пользователя')
+    slug = AutoSlugField(
+        max_length=255,
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        verbose_name='URL пользователя'
+    )
     fullName = models.CharField(
         max_length=150,
-        blank=True,
+        # blank=True,
+        blank=False,
         null=True,
         default=None,
         verbose_name='Ф.И.О.'
     )
-    avatar = models.ImageField(
-        upload_to='images/images_avatars/',
-        default='images/no_image.jpg',
+    # avatar = models.ImageField(
+    #     upload_to='images/images_avatars/',
+    #     default='images/no_image.jpg',
+    #     blank=True,
+    #     null=True,
+    #     validators=[FileExtensionValidator(allowed_extensions=('png', 'jpg', 'jpeg'))],
+    #     verbose_name='Аватар пользователя'
+    # )
+    avatar = models.ForeignKey(
+        'AvatarsImages',
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        validators=[FileExtensionValidator(allowed_extensions=('png', 'jpg', 'jpeg'))],
+        related_name="profile",
         verbose_name='Аватар пользователя'
     )
-    email = models.EmailField(max_length=255, unique=True, blank=True, default=None, verbose_name='Email')
+    # email = models.EmailField(max_length=50, unique=True, blank=True, default=None, verbose_name='Email')
     phone = PhoneNumberField(unique=True, null=True, blank=True, default=None, verbose_name='Номер телефона')
 
     class Meta:
@@ -606,13 +576,13 @@ class Profile(models.Model):
     def __str__(self):
         return f'{self.user.username} (Profile)'
 
-    def save(self):
-        super().save()
-        img = Image.open(self.avatar.path)
-        if img.height > 50 or img.width > 50:
-            output_size = (50, 50)
-            img.thumbnail(output_size)
-            img.save(self.avatar.path)
+    # def save(self):
+    #     super().save()
+    #     img = Image.open(self.avatar.path)
+    #     if img.height > 50 or img.width > 50:
+    #         output_size = (50, 50)
+    #         img.thumbnail(output_size)
+    #         img.save(self.avatar.path)
 
 
 class PurchaseList(models.Model):
