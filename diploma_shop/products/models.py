@@ -9,6 +9,7 @@ from django.db import models
 from django.contrib.auth.context_processors import auth
 from django.contrib.auth.models import User
 from PIL import Image
+from django.db.models import Sum, F
 from django.utils import timezone
 from django.urls import reverse
 from phonenumber_field.modelfields import PhoneNumberField
@@ -23,14 +24,6 @@ class Category(models.Model):
     """
     title = models.CharField(max_length=200, db_index=True, verbose_name='Название категории продукта')
     description = models.TextField(blank=True, verbose_name='Описание категории продукта')
-    # slug = models.SlugField(max_length=200, db_index=True, unique=True, verbose_name='URL категории продукта')
-    # thumbnail = models.ImageField(
-    #     blank=True,
-    #     upload_to='images/thumbnails/',
-    #     default='images/no_image.jpg',
-    #     validators=[FileExtensionValidator(allowed_extensions=('png', 'jpg', 'webp', 'jpeg', 'gif'))],
-    #     verbose_name='Превью категории продукта'
-    # )
     image = models.ForeignKey(
         'CategoryImages',
         on_delete=models.SET_NULL,
@@ -55,37 +48,6 @@ class Category(models.Model):
 
     def __str__(self):
         return self.title
-
-
-# class ProductType(models.Model):
-#     """
-#     Модель типа продукта для магазина
-#     """
-#     name = models.CharField(max_length=200, db_index=True, verbose_name=_('product type name'))
-#     slug = models.SlugField(max_length=200, db_index=True, unique=True, verbose_name=_('product Type URL'))
-#     category_product = models.ForeignKey(
-#         'ProductCategory',
-#         on_delete=models.PROTECT,
-#         default=True,
-#         related_name='product_category_product_type',
-#         verbose_name=_('product category')
-#     )
-#
-#     # property_type_product = models.ForeignKey(
-#     #     'PropertyTypeProduct',
-#     #     on_delete=models.PROTECT,
-#     #     default=True,
-#     #     related_name='shop_property_type_product_type',
-#     #     verbose_name="Тип характеристики продукта"
-#     # )
-#
-#     class Meta:
-#         ordering = ('category_product',)
-#         verbose_name = _('type of product')
-#         verbose_name_plural = _('product types')
-#
-#     def __str__(self):
-#         return self.name
 
 
 class ProductInstance(models.Model):
@@ -118,13 +80,7 @@ class ProductInstance(models.Model):
         decimal_places=2,
         verbose_name='Цена продукта при распродаже'
     )
-    # thumbnail = models.ImageField(
-    #     blank=True,
-    #     upload_to='images/thumbnails/',
-    #     default='images/no_image.jpg',
-    #     validators=[FileExtensionValidator(allowed_extensions=('png', 'jpg', 'webp', 'jpeg', 'gif'))],
-    #     verbose_name='Превью продукта'
-    # )
+
     count = models.PositiveIntegerField(null=True, blank=True, verbose_name='Количество продукта на складе')
     available = models.BooleanField(default=True, null=True, verbose_name='Доступность продукта в каталоге')
 
@@ -154,6 +110,13 @@ class ProductInstance(models.Model):
         max_digits=10,
         decimal_places=1,
         verbose_name='Рейтинг продукта'
+    )
+    order = models.ForeignKey(
+        'Order',
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name='products'
     )
 
     def __str__(self):
@@ -250,13 +213,7 @@ class ProductImages(models.Model):
     """
     Модель изображения для магазина
     """
-    # title = models.CharField(
-    #     max_length=150,
-    #     blank=True,
-    #     null=True,
-    #     default=None,
-    #     verbose_name='Описание изображения'
-    # )
+
     src = models.ImageField(
         upload_to='images/images_product/',
         default='images/no_image.jpg',
@@ -304,15 +261,9 @@ class ProductImages(models.Model):
 
 class CategoryImages(models.Model):
     """
-    Модель изображения для магазина
+    Модель изображения для категории
     """
-    # title = models.CharField(
-    #     max_length=150,
-    #     blank=True,
-    #     null=True,
-    #     default=None,
-    #     verbose_name='Описание изображения'
-    # )
+
     src = models.ImageField(
         upload_to='images/images_product/',
         default='images/no_image.jpg',
@@ -360,21 +311,6 @@ class AvatarsImages(models.Model):
         null=True,
         verbose_name='Изображение'
     )
-    # alt = models.CharField(max_length=255, null=True, blank=True)
-    # title = models.CharField(
-    #     max_length=150,
-    #     blank=True,
-    #     null=True,
-    #     default=None,
-    #     verbose_name='Описание изображения'
-    # )
-    # src = models.ImageField(
-    #     upload_to='images/images_avatars/',
-    #     default='images/no_image.jpg',
-    #     blank=True,
-    #     null=True,
-    #     verbose_name='Изображение'
-    # )
     alt = models.CharField(
         max_length=255,
         blank=True,
@@ -458,10 +394,7 @@ class Review(models.Model):
     product = models.ForeignKey(
         'ProductInstance',
         default=None,
-        # null=True,
-        # blank=True,
         on_delete=models.CASCADE,
-        # related_name='product_review',
         related_name='reviews',
         verbose_name='Продукт'
     )
@@ -470,7 +403,6 @@ class Review(models.Model):
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
-        # related_name="reviews_parent",
         related_name="children_review",
         verbose_name='Родительский отзыв'
     )
@@ -518,7 +450,6 @@ class Profile(models.Model):
         related_name='shop_profile_user',
         verbose_name='Пользователь'
     )
-    # slug = models.SlugField(max_length=255, unique=True, db_index=True, verbose_name='URL пользователя')
     slug = AutoSlugField(
         max_length=255,
         null=True,
@@ -535,14 +466,6 @@ class Profile(models.Model):
         default=None,
         verbose_name='Ф.И.О.'
     )
-    # avatar = models.ImageField(
-    #     upload_to='images/images_avatars/',
-    #     default='images/no_image.jpg',
-    #     blank=True,
-    #     null=True,
-    #     validators=[FileExtensionValidator(allowed_extensions=('png', 'jpg', 'jpeg'))],
-    #     verbose_name='Аватар пользователя'
-    # )
     avatar = models.ForeignKey(
         'AvatarsImages',
         on_delete=models.SET_NULL,
@@ -551,13 +474,9 @@ class Profile(models.Model):
         related_name="profile",
         verbose_name='Аватар пользователя'
     )
-    # email = models.EmailField(max_length=50, unique=True, blank=True, default=None, verbose_name='Email')
     phone = PhoneNumberField(unique=True, null=True, blank=True, default=None, verbose_name='Номер телефона')
 
     class Meta:
-        """
-        Сортировка, название таблицы в базе данных
-        """
         ordering = ('user',)
         verbose_name = 'Профиль пользователя'
         verbose_name_plural = 'Профили пользователей'
@@ -576,229 +495,221 @@ class Profile(models.Model):
     def __str__(self):
         return f'{self.user.username} (Profile)'
 
-    # def save(self):
-    #     super().save()
-    #     img = Image.open(self.avatar.path)
-    #     if img.height > 50 or img.width > 50:
-    #         output_size = (50, 50)
-    #         img.thumbnail(output_size)
-    #         img.save(self.avatar.path)
+
+# class PurchaseList(models.Model):
+#     """
+#     Модель списка покупок пользователя
+#     """
+#     user = models.OneToOneField(
+#         # User,
+#         to=User,
+#         on_delete=models.CASCADE,
+#         related_name='user_purchase_list',
+#         verbose_name='user'
+#     )
+#     METHOD_PAYMENT = (
+#         (1, 'карта'),
+#         (2, 'счёт'),
+#     )
+#     METHOD_DELIVERY = (
+#         (1, 'доставка'),
+#         (2, 'экспресс-доставка'),
+#     )
+#     STATUS_PAYMENT = (
+#         (1, 'не оплачено'),
+#         (2, 'оплачено'),
+#         (3, 'возврат оплаты'),
+#     )
+#     STATUS_DELIVERY = (
+#         (1, 'доставлено'),
+#         (2, 'доставляется'),
+#         (3, 'не доставлено'),
+#         (4, 'возврат продукта'),
+#     )
+#     payment_method = models.IntegerField(
+#         null=True,
+#         choices=METHOD_PAYMENT,
+#         default=1,
+#         verbose_name="Способ оплаты"
+#     )
+#     delivery_method = models.IntegerField(
+#         null=True,
+#         choices=METHOD_DELIVERY,
+#         default=1,
+#         verbose_name="Способ доставки"
+#     )
+#     payment_status = models.IntegerField(
+#         null=True,
+#         choices=STATUS_PAYMENT,
+#         default=1,
+#         verbose_name="Статус оплаты"
+#     )
+#     delivery_status = models.IntegerField(
+#         null=True,
+#         choices=STATUS_DELIVERY,
+#         default=1,
+#         verbose_name="Статус доставки"
+#     )
+#     time_create = models.DateTimeField(
+#         auto_now_add=True,
+#         verbose_name=_('purchase time')
+#     )
+#     price = models.DecimalField(
+#         null=True,
+#         blank=True,
+#         max_digits=10,
+#         decimal_places=2,
+#         verbose_name='Общая стоимость заказа'
+#     )
+#     error_text = models.TextField(
+#         max_length=5000,
+#         blank=True,
+#         null=True,
+#         default=None,
+#         verbose_name='Текст ошибки'
+#     )
+#     product = models.ManyToManyField(
+#         'ProductInstance',
+#         related_name=_('product'),
+#         verbose_name="Продукт"
+#     )
+#     slug = models.SlugField(
+#         max_length=255,
+#         default='purchase',
+#         db_index=True,
+#         verbose_name='URL истории покупок'
+#     )
+#
+#     class Meta:
+#         ordering = ('time_create',)
+#         verbose_name = 'Список покупок пользователя'
+#         verbose_name_plural = 'Списки покупок пользователей'
+#
+#     def __str__(self):
+#         return f' Список покупок пользователя {self.user.username}'
 
 
-class PurchaseList(models.Model):
+class Basket(models.Model):
     """
-    Модель списка покупок пользователя
+    Модель корзины
     """
     user = models.OneToOneField(
-        # User,
-        to=User,
+        User,
         on_delete=models.CASCADE,
-        related_name='user_purchase_list',
-        verbose_name='user'
-    )
-    METHOD_PAYMENT = (
-        (1, 'карта'),
-        (2, 'счёт'),
-    )
-    METHOD_DELIVERY = (
-        (1, 'доставка'),
-        (2, 'экспресс-доставка'),
-    )
-    STATUS_PAYMENT = (
-        (1, 'не оплачено'),
-        (2, 'оплачено'),
-        (3, 'возврат оплаты'),
-    )
-    STATUS_DELIVERY = (
-        (1, 'доставлено'),
-        (2, 'доставляется'),
-        (3, 'не доставлено'),
-        (4, 'возврат продукта'),
-    )
-    payment_method = models.IntegerField(
-        null=True,
-        choices=METHOD_PAYMENT,
-        default=1,
-        verbose_name="Способ оплаты"
-    )
-    delivery_method = models.IntegerField(
-        null=True,
-        choices=METHOD_DELIVERY,
-        default=1,
-        verbose_name="Способ доставки"
-    )
-    payment_status = models.IntegerField(
-        null=True,
-        choices=STATUS_PAYMENT,
-        default=1,
-        verbose_name="Статус оплаты"
-    )
-    delivery_status = models.IntegerField(
-        null=True,
-        choices=STATUS_DELIVERY,
-        default=1,
-        verbose_name="Статус доставки"
-    )
-    time_create = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_('purchase time')
-    )
-    price = models.DecimalField(
-        null=True,
-        blank=True,
-        max_digits=10,
-        decimal_places=2,
-        verbose_name='Общая стоимость заказа'
-    )
-    error_text = models.TextField(
-        max_length=5000,
-        blank=True,
-        null=True,
-        default=None,
-        verbose_name='Текст ошибки'
-    )
-    product = models.ManyToManyField(
-        'ProductInstance',
-        related_name=_('product'),
-        verbose_name="Продукт"
-    )
-    slug = models.SlugField(
-        max_length=255,
-        default='purchase',
-        db_index=True,
-        verbose_name='URL истории покупок'
+        verbose_name='Пользователь'
     )
 
-    class Meta:
-        ordering = ('time_create',)
-        verbose_name = 'Список покупок пользователя'
-        verbose_name_plural = 'Списки покупок пользователей'
+    products = models.ManyToManyField(
+        'ProductInstance',
+        through='BasketItem',
+        verbose_name='Выбранные товары'
+    )
+
+    totalCost = models.FloatField(
+        blank=True,
+        null=True,
+        # default=0
+    )  # Можно удалить
 
     def __str__(self):
-        return f' Список покупок пользователя {self.user.username}'
+        return f'{self.user}'
+
+    class Meta:
+        verbose_name = 'Корзина'
+        verbose_name_plural = 'Корзины'
+        ordering = ['id']
 
 
-# class SpecialOffer(models.Model):
-#     """
-#     Модель спецпредложений пользователя
-#     """
-#     name_special_offer = models.CharField(
-#         max_length=100,
-#         blank=True,
-#         default=None,
-#         verbose_name=_('name of the special offer')
-#     )
-#     description_special_offer = models.TextField(
-#         blank=True,
-#         default=None,
-#         verbose_name=_('name of the special offer')
-#     )
-#     slug = models.SlugField(max_length=255, default='specialoffer', db_index=True, verbose_name=_('special offer URL'))
-#     customer = models.ManyToManyField('Customer', related_name='shop_specialoffer', verbose_name=_('customer'))
-#
-#     class Meta:
-#         verbose_name = _('special offer for the user')
-#         verbose_name_plural = _('special offer for the users')
-#
-#     def __str__(self):
-#         return self.name_special_offer
+class BasketItem(models.Model):
+    """
+    Модель продукта в корзине
+    """
+    basket = models.ForeignKey(
+        'Basket',
+        on_delete=models.CASCADE,
+        # related_name='products',
+        related_name='items',
+        verbose_name='Корзина'
+    )
+    product = models.ForeignKey(
+        'ProductInstance',
+        on_delete=models.CASCADE,
+        related_name='product_basketitem',
+        verbose_name='Товар'
+    )
+    count = models.PositiveIntegerField(verbose_name='Количество')
+
+    def __str__(self):
+        return f'{self.product} ({self.count} шт.)'
+
+    class Meta:
+        verbose_name = 'Продукт в корзине'
+        verbose_name_plural = 'Продукты в корзине'
+        ordering = ['id']
 
 
-# class Order(models.Model):
-#     """
-#     Модель параметров заказа
-#     """
-#     STATUS_CHOICES = (
-#         (1, 'waiting_for_payment'),
-#         (2, 'paid'),
-#         (3, 'shipped'),
-#         (4, 'delivered'),
-#         (5, 'returned'),
-#     )
-#     STATUS_CART = (
-#         (1, 'in_cart'),
-#         (2, 'not_in_cart')
-#     )
-#
-#     customer = models.ForeignKey(
-#         'Customer',
-#         on_delete=models.CASCADE,
-#         related_name='shop_customer_order',
-#         verbose_name='Покупатель'
-#     )
-#     created = models.DateTimeField(auto_now_add=True, verbose_name="Дата и время формирования заказа")
-#     updated = models.DateTimeField(auto_now=True, verbose_name="Дата и время изменения заказа")
-#     items = models.ManyToManyField(
-#         'OrderItem',
-#         related_name='shop_items_order',
-#         verbose_name="Заказанные продукты"
-#     )
-#     status = models.IntegerField(
-#         null=True,
-#         choices=STATUS_CHOICES,
-#         default=STATUS_CART,
-#         verbose_name="Статус заказа"
-#     )
-#
-#     # payment = models.ForeignKey(Payment, on_delete=models.PROTECT, blank=True, null=True, verbose_name="Оплата")
-#
-#     def __str__(self):
-#         return self.customer.user.username
-#
-#     class Meta:
-#         verbose_name = 'Параметры заказа'
-#         verbose_name_plural = 'Параметры заказа'
-#         ordering = ['pk']
-class Order(models.Model):
+class Order(models.Model):  # нужно будет убрать поле profile из модели, всё равно у basket есть user
     """
     Модель заказа
     """
+    DELIVERY_CHOICES = (
+        (1, 'Доставка'),
+        (2, 'Экспресс-доставка'),
+    )
+    PAYMENT_CHOICES = (
+        (1, 'Онлайн картой'),
+        (2, 'Онлайн со случайного чужого счёта'),
+    )
     STATUS_CHOICES = (
         (1, 'ожидание платежа'),
         (2, 'оплачено'),
-        (3, 'отправлено'),
-        (4, 'доставлено'),
-        (5, 'вернулся'),
     )
-    STATUS_CART = (
-        (1, 'в корзине'),
-        (2, 'не в корзине')
+    createdAt = models.DateTimeField(auto_now_add=True, verbose_name="Дата и время формирования заказа")
+    deliveryType = models.IntegerField(
+        null=True,
+        choices=DELIVERY_CHOICES,
+        default=1,
+        verbose_name="Способ доставки"
     )
-
-    user = models.OneToOneField(
-        # User,
-        to=User,
-        on_delete=models.CASCADE,
-        related_name='user_order',
-        verbose_name='Пользователь'
+    paymentType = models.IntegerField(
+        null=True,
+        choices=PAYMENT_CHOICES,
+        default=1,
+        verbose_name="Способ оплаты"
     )
-    created = models.DateTimeField(auto_now_add=True, verbose_name="Дата и время формирования заказа")
-    updated = models.DateTimeField(auto_now=True, verbose_name="Дата и время изменения заказа")
-    items = models.ManyToManyField(
-        'OrderItem',
-        related_name='shop_items_order',
-        verbose_name="Заказанные продукты"
-    )
+    totalCost = models.FloatField(default=1)
     status = models.IntegerField(
         null=True,
         choices=STATUS_CHOICES,
-        default=STATUS_CART,
+        default=1,
         verbose_name="Статус заказа"
     )
-    payment = models.ForeignKey(
-        'Payment',
-        on_delete=models.PROTECT,
+    city = models.CharField(max_length=100, default='yyy')
+    address = models.CharField(max_length=100, default='xxx')
+    profile = models.ForeignKey(
+        'Profile',
+        on_delete=models.CASCADE,
+        default=1,
+        related_name='profile_order',
+        verbose_name='Покупатель'
+    )
+    basket = models.OneToOneField(
+        'Basket',
+        on_delete=models.CASCADE,
         blank=True,
         null=True,
-        verbose_name="Оплата"
+        verbose_name='Корзина'
     )
 
-    # amount = models.DecimalField(max_digits=20, decimal_places=2, blank=True, null=True, verbose_name="Количество")
-    # creation_time = models.DateTimeField(auto_now_add=True, verbose_name="Дата и время формирования заказа")
-    # comment = models.TextField(blank=True, null=True, verbose_name="Комментарий к заказу")
-
     def __str__(self):
-        return self.user.username
+        return f'{self.basket.user.username}'
+
+    def calculate_total_cost(self):
+        total_cost = 0
+        basket_items = self.basket.items.all()  # Получаем все элементы в корзине
+        for basket_item in basket_items:
+            total_cost += basket_item.product.price * basket_item.count  # Суммируем стоимость каждого продукта в корзине
+        return total_cost
 
     class Meta:
         verbose_name = 'Параметры заказа'
@@ -806,63 +717,43 @@ class Order(models.Model):
         ordering = ['pk']
 
 
-class OrderItem(models.Model):
+class PaymentCard(models.Model):
     """
-    Модель заказанного продукта
+    Модель карты оплаты
     """
-    # order = models.ForeignKey(
-    #     'Order',
-    #     on_delete=models.CASCADE,
-    #     related_name='shop_order_orderitem',
-    #     verbose_name="Параметры заказа"
-    # )
-    product = models.ForeignKey(
-        'ProductInstance',
+    owner = models.ForeignKey(
+        User,
         on_delete=models.CASCADE,
-        related_name='shop_product_orderitem',
-        verbose_name="Заказанный продукт"
+        related_name='cards',
+        verbose_name='Владелец',
     )
-    price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name="Цена заказанного продукта с учётом всех акций и скидок"
+    number = models.CharField(
+        unique=True,
+        max_length=8,
+        verbose_name='Номер карты',
     )
-    quantity = models.PositiveIntegerField(
-        default=1,
-        verbose_name="Количество заказанного продукта"
+    name = models.CharField(
+        max_length=30,
+        verbose_name='Имя',
+    )
+    month = models.CharField(
+        max_length=2,
+        verbose_name='Месяц',
+    )
+    year = models.CharField(
+        max_length=4,
+        verbose_name='Год',
+    )
+    code = models.CharField(
+        max_length=3,
+        verbose_name='Код',
     )
 
     def __str__(self):
-        return self.product.name
+        # return f'{self.owner}'
+        return f'{self.owner} - {self.name}'
 
     class Meta:
-        verbose_name = 'Заказанный продукт'
-        verbose_name_plural = 'Заказанные продукты'
-        ordering = ['pk']
-
-
-class Payment(models.Model):
-    """
-    Модель оплаты заказа
-    """
-    user = models.ForeignKey(
-        # User,
-        to=User,
-        on_delete=models.CASCADE,
-        related_name='user_payment',
-        verbose_name='Покупатель'
-    )
-    date = models.DateTimeField(auto_now_add=True, verbose_name="Дата и время оплаты")
-    payment_amount = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name="Сумма оплаты"
-    )
-
-    def __str__(self):
-        return self.user
-
-    class Meta:
-        verbose_name = 'Оплата'
-        verbose_name_plural = 'Оплаты'
+        verbose_name = 'Параметры карты оплаты'
+        verbose_name_plural = 'Параметры карт оплаты'
         ordering = ['pk']

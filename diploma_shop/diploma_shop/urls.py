@@ -29,9 +29,6 @@ urlpatterns = [
     path('auth/', include('djoser.urls.jwt')),
     path('ckeditor/', include('ckeditor_uploader.urls')),
     path("api/", include('products.urls')),
-    # path("products/", include('products.urls')),
-    # path('api/sign-in/', include('rest_framework.urls')),
-    # path('api/', include(('products.urls', 'products'), namespace='products')),
 ]
 
 if settings.DEBUG:

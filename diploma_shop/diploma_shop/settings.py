@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'djoser',
     'rest_framework.authtoken',
     'autoslug',
+    'crispy_forms',
 
     # 'frontend',
     'frontend.apps.FrontendConfig',
@@ -189,6 +190,9 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.FormParser',
         'rest_framework.parsers.MultiPartParser'
     ],
+    # 'DEFAULT_RENDERER_CLASSES': [
+    #     'rest_framework.renderers.BrowsableAPIRenderer',
+    # ],
     # "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 

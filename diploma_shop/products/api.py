@@ -20,20 +20,16 @@ from rest_framework import viewsets
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
+
+from .forms import BasketDeleteForm
 from .serializers import *
 from .models import *
 from .service import *
 
 
-# class ProductListView(ListAPIView):
-#     """Вывод списка продуктов, версия 1"""
-#     queryset = ProductInstance.objects.filter(available=True)
-#     serializer_class = ProductListSerializer
-#     pagination_class = CustomPaginationProducts
-
 class ProductListView(ListAPIView):
     """
-    Вывод списка продуктов, работает
+    Вывод списка продуктов
     """
     queryset = ProductInstance.objects.filter(available=True)
     serializer_class = ProductListSerializer
@@ -42,16 +38,6 @@ class ProductListView(ListAPIView):
     def get_queryset(self):
         queryset = ProductInstance.objects.filter(available=True).annotate(reviews_count=Count('reviews'))
         return queryset
-
-
-# class CatalogViewSet(ModelViewSet):
-#     # queryset = ProductInstance.objects.filter(available=True)
-#     queryset = ProductInstance.objects.filter(available=True).annotate(reviews_count=Count('reviews'))
-#     serializer_class = ProductListSerializer
-#     filter_backends = [DjangoFilterBackend, OrderingFilter]
-#     # filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
-#     filterset_fields = ['category']
-#     ordering_fields = ['number_of_purchases', 'price', 'reviews', 'date']
 
 
 class CatalogView(ListAPIView):
@@ -74,29 +60,10 @@ class CatalogView(ListAPIView):
     ordering_fields = ['number_of_purchases', 'price', 'reviews_count', 'date']
     filterset_fields = ['title', 'price', 'count', 'freeDelivery', 'tags']
 
-    # pagination_class = CustomPaginationProducts
-    # def get_queryset(self):
-    #     queryset = super().get_queryset()
-    #     # Применение фильтра формы фильтрации
-    #     category = self.request.query_params.get('category')
-    #     if category:
-    #         queryset = queryset.filter(category=category)
-    #     return queryset
-
-
-# class ProductPopularListView(ListAPIView):
-#     serializer_class = ProductPopularSerializer
-#
-#     def get_queryset(self):
-#         # queryset = ProductInstance.objects.order_by('-sort_index', '-number_of_purchases')[:8]
-#         queryset = ProductInstance.objects.filter(available=True).order_by('-sort_index', '-number_of_purchases')[
-#                    :8].annotate(reviews_count=Count('reviews'))
-#         return queryset
-
 
 class ProductPopularView(APIView):
     """
-    Вывод списка топ-продуктов, работает
+    Вывод списка топ-продуктов
     """
 
     def get(self, request):
@@ -108,7 +75,7 @@ class ProductPopularView(APIView):
 
 class ProductLimitedView(APIView):
     """
-    Вывод списка продуктов с ограниченным тиражом, работает
+    Вывод списка продуктов с ограниченным тиражом
     """
 
     def get(self, request):
@@ -120,7 +87,7 @@ class ProductLimitedView(APIView):
 
 class ProductSalesView(ListAPIView):
     """
-    Вывод списка продуктов по распродаже, работает
+    Вывод списка продуктов по распродаже
     """
     serializer_class = ProductSalesSerializer
     pagination_class = CustomPaginationProducts
@@ -133,7 +100,7 @@ class ProductSalesView(ListAPIView):
 
 class ProductBannersView(APIView):
     """
-    Вывод баннера из списка топ-продуктов, работает
+    Вывод баннера из списка топ-продуктов
     """
 
     def get(self, request):
@@ -145,14 +112,13 @@ class ProductBannersView(APIView):
 
 class ProductDetailView(APIView):
     """
-    Вывод одного конкретного продукта, работает
+    Вывод одного конкретного продукта
     """
 
     def get(self, request, pk):
         product = ProductInstance.objects.get(id=pk, available=True)
         average_rating = Review.objects.filter(product=product).aggregate(Avg('rate__value'))
-        # email = Review.objects.filter(product=product).
-        # print('---------***------x---', x, '---***---')
+        # email = Review.objects.filter(product=product)
         product.rating = average_rating['rate__value__avg']
         product.save()
         serializer = ProductDetailSerializer(product)
@@ -162,7 +128,7 @@ class ProductDetailView(APIView):
 
 class CategoryView(APIView):
     """
-    Вывод категорий продуктов, работает
+    Вывод категорий продуктов
     """
 
     def get(self, request):
@@ -171,14 +137,9 @@ class CategoryView(APIView):
         return Response(serializer.data)
 
 
-# class TagsView(ListAPIView):
-#     queryset = Tag.objects.all()
-#     serializer_class = TagSerializer
-
-
 class TagsView(APIView):
     """
-    Вывод тегов продуктов, работает
+    Вывод тегов продуктов
     """
 
     def get(self, request):
@@ -189,7 +150,7 @@ class TagsView(APIView):
 
 class ReviewCreateView(APIView):
     """
-    Добавление отзыва продукту, работает
+    Добавление отзыва продукту
     """
 
     def post(self, request, pk):
@@ -215,158 +176,6 @@ class ReviewCreateView(APIView):
         else:
             return Response(status=400)
 
-
-# class ProfileView(APIView):
-#     """Отображение, добавление и изменение профиля пользователя"""
-#
-#     # parser_classes = (FileUploadParser,)
-#     # parser_classes = (MultiPartParser,)
-#
-#     # headers: {
-#     #     'Content-Type': 'multipart/form-data'
-#     # }
-#
-#     def get(self, request):
-#         user = request.user
-#         profile = Profile.objects.get(user=user)
-#         serializer = ProfileSerializer(profile)
-#         return Response(serializer.data)
-#
-#     # def post(self, request: Request) -> Response:
-#     #     user = request.user
-#     #     # email = user.email
-#     #     profile = Profile.objects.get(user=user)
-#     #     serializer = ProfileSerializer(profile, data=request.data, email='user.email', partial=True)
-#     #     if serializer.is_valid():
-#     #         serializer.save()
-#     #         return Response(serializer.data)
-#     #     # user_data = json.loads(request.body)
-#     #     # full_name = user_data.get('fullName')
-#     #     # email = user_data.get('email')
-#     #     # phone = user_data.get('phone')
-#     #     # Profile.objects.update(user=user, fullName=full_name, email=email, phone=phone)
-#     #     # return Response(status=status.HTTP_200_OK)
-#     #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def post1(self, request):
-#         user = request.user
-#         profile = Profile.objects.get(user=user)
-#         avatar = AvatarsImages.objects.get(profile=profile)
-#         # serializer = ProfileSerializer(data=request.data, files=request.FILES)
-#         serializer = ProfileSerializer(data=request.data)
-#         # serializer.is_valid(raise_exception=True)
-#         # serializer.save()
-#         if serializer.is_valid():
-#             serializer.save()
-#             avatar.src = serializer.avatar
-#             # profile.fullName = serializer.fullName
-#             user.email = serializer.email
-#             # profile.phone = serializer.phone
-#             profile.save()
-#             avatar.save()
-#
-#             return Response(serializer.data)
-#
-#         x = profile.user
-#         print('***---x---***', x, '-------*******')
-#         yyy = profile.fullName
-#         print('***---fullName---***', yyy, '-------*******')
-#         zzz = avatar.src
-#         print('***---avatar.src---***', zzz, '-------*******')
-#         zzzyyy = user.email
-#         print('***---email---***', zzzyyy, '-------*******')
-#         zzzyyyxxx = profile.phone
-#         print('***---profile.phone---***', zzzyyyxxx, '-------*******')
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def post(self, request):
-#         user = request.user
-#         profile = Profile.objects.get(user=user)
-#         print('***---profile.user---***', profile.user, '-------*******')
-#         print('***---profile.fullName---***', profile.fullName, '-------*******')
-#         print('***---profile.phone---***', profile.phone, '-------*******')
-#         print('***---user.email---***', profile.user.email, '-------*******')
-#         # avatar = AvatarsImages.objects.get(profile=profile)
-#         # print('***---avatar.src---***', avatar.src, '-------*******')
-#         serializer = ProfileSerializer(data=request.data)
-#         if serializer.is_valid():
-#             print('***---зашёл в иф---***')
-#
-#             serializer.save()
-#             print('***---2serializer.data---***', serializer.data, '-------*******')
-#         return Response(serializer.data)
-
-
-# class ProfileView(APIView):
-#     """
-#     версия 1
-#     """
-#     # def get(self, request):
-#     #     profile = Profile.objects.get(user=request.user)
-#     #     serializer = ProfileSerializer(profile)
-#     #     return Response(serializer.data)
-#     def get(self, request):
-#         try:
-#             profile = Profile.objects.get(user=request.user)
-#         except ObjectDoesNotExist:
-#             profile = Profile.objects.create(user=request.user)
-#         serializer = ProfileSerializer(profile)
-#         return Response(serializer.data)
-#
-#     def post(self, request):
-#         serializer = ProfileSerializer(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save(user=request.user)
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def put(self, request):
-#         profile = Profile.objects.get(user=request.user)
-#         serializer = ProfileSerializer(profile, data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-# class ProfileView(APIView):
-#     """
-#     версия 2
-#     """
-#     serializer_class = ProfileSerializer
-#
-#     def get(self, request):
-#         profiles = Profile.objects.all()
-#         serializer = self.serializer_class(profiles, many=True)
-#         return Response(serializer.data)
-#
-#     def post(self, request):
-#         serializer = self.serializer_class(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class ProfileView(APIView):
-#     """
-#     версия 3
-#     """
-#     serializer_class = ProfileSerializer
-#
-#     def get(self, request):
-#         try:
-#             profile = Profile.objects.get(user=request.user)
-#         except ObjectDoesNotExist:
-#             profile = Profile.objects.create(user=request.user)
-#         serializer = ProfileSerializer(profile)
-#         return Response(serializer.data)
-#
-#     def post(self, request):
-#         serializer = self.serializer_class(data=request.data)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProfileView(APIView):
     """
@@ -398,10 +207,6 @@ class ProfileView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# class ProfileView(RetrieveUpdateAPIView):
-#     serializer_class = ProfileSerializer
-#     queryset = Profile.objects.all()
-
 class SignInView(APIView):
     """
     Вход
@@ -422,104 +227,6 @@ class SignInView(APIView):
                 return Response({'message': 'Вы успешно вошли в систему!'})
 
         return Response({'error': 'Неверные учетные данные'})
-
-
-# class SignInView(APIView):
-#     """
-#     работает 1
-#     """
-#     permission_classes = (permissions.AllowAny,)
-#
-#     def post(self, request, format=None):
-#         serializer = SignInSerializer(data=self.request.data,
-#                                      context={'request': self.request})
-#         serializer.is_valid(raise_exception=True)
-#         user = serializer.validated_data['user']
-#         login(request, user)
-#         return Response(None, status=status.HTTP_202_ACCEPTED)
-
-
-# class SignInView(APIView):
-#     authentication_classes = [SessionAuthentication, BasicAuthentication]
-#     permission_classes = [IsAuthenticated]
-#
-#     def get(self, request, format=None):
-#         content = {
-#             'user': str(request.user),  # `django.contrib.auth.User` instance.
-#             'auth': str(request.auth),  # None
-#         }
-#         return Response(content)
-
-# class SignInView(APIView):
-#     def post(self, request) -> Response:
-#         serializer_data = list(request.POST.keys())[0]
-#         user_data = json.loads(serializer_data)
-#         username = user_data.get('username')
-#         password = user_data.get('password')
-#         try:
-#             user = User.objects.create_user(username=username, password=password)
-#             user = authenticate(request, username=username, password=password)
-#             if user is not None:
-#                 login(request, user)
-#                 return Response(status=status.HTTP_201_CREATED)
-#         except Exception:
-#             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-# class SignInView(APIView):
-#
-#     def post(self, request: Request) -> Response:
-#         serializer = SignInSerializer(data=request.data)
-#         if serializer.is_valid():
-#             username = serializer.data['username']
-#             password = serializer.data['password']
-#             user = authenticate(request, username=username, password=password)
-#             if user is not None:
-#                 login(request, user)
-#                 return Response(status=status.HTTP_201_CREATED)
-#             return Response(status=status.HTTP_403_FORBIDDEN)
-
-
-# class SignInView(APIView):
-#     def post(self, request):
-#         serializer = SignInSerializer(data=request.data)
-#         # serializer_data = list(request.POST.keys())[0]
-#         if serializer.is_valid():
-#             user_data = json.loads(serializer.data)
-#             username = user_data.get('username')
-#             password = user_data.get('password')
-#             try:
-#                 user = authenticate(request, username=username, password=password)
-#                 if user is not None:
-#                     login(request, user)
-#                     return Response(status=status.HTTP_201_CREATED)
-#             except Exception:
-#                 return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-# class SignUpView(CreateAPIView):
-#     """
-#     Регистрация, работает 1
-#     """
-#     queryset = User.objects.all()
-#     serializer_class = SignUpSerializer
-
-# class SignUpView(APIView):
-#     """
-#     регистрация ии 1, работает в рест, не работает во фронте, возможно 'name' это не 'first_name'
-#     """
-#     def post(self, request):
-#         serializer = SignUpSerializer(data=request.data)
-#         if serializer.is_valid():
-#             username = serializer.validated_data.get('username')
-#             password = serializer.validated_data.get('password')
-#             name = serializer.validated_data.get('first_name')
-#
-#             if User.objects.filter(username=username).exists():
-#                 return Response({'error': 'Пользователь с таким именем пользователя уже существует'})
-#
-#             user = User.objects.create_user(username=username, password=password, first_name=name)
-#             return Response({'message': 'Пользователь успешно зарегистрирован'})
-#
-#         return Response(serializer.errors)
 
 
 class SignUpView(APIView):
@@ -559,7 +266,7 @@ class SignOutView(APIView):
 
 class ChangePasswordAPIView(APIView):
     """
-    Смена пароля, работает
+    Смена пароля
     """
 
     def post(self, request):
@@ -594,6 +301,155 @@ class UpdateAvatarAPIView(APIView):
 
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BasketView(APIView):
+    """
+    Корзина
+    """
+
+    def get(self, request):  # работает
+        basket = Basket.objects.get(user=request.user)
+        # basket_items = basket.basketitem_set.all()
+        basket_items = basket.items.all()
+        product_ids = basket_items.values_list(
+            'product_id',
+            flat=True
+        )
+        products = ProductInstance.objects.filter(id__in=product_ids, available=True).annotate(
+            reviews_count=Count('reviews'))
+        serializer = OrderBasketProductSerializer(products, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):  # Для POST-запроса по product, работает, но не на фронте
+        serializer = BasketItemSerializer(data=request.data)
+        if serializer.is_valid():
+            basket = Basket.objects.get(user=request.user)
+            product_id = serializer.validated_data['product']
+            count = serializer.validated_data['count']
+            product = ProductInstance.objects.get(id=product_id)
+            basket_item = BasketItem.objects.create(
+                basket=basket,
+                product=product,
+                count=count
+            )
+            return Response(BasketProductSerializer(basket_item.product).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        basket = Basket.objects.get(user=request.user)
+        serializer = DeleteBasketItemSerializer(data=request.data)
+        if serializer.is_valid():
+            item_id = serializer.validated_data['id']
+            item_count = serializer.validated_data['count']
+            basket_item = BasketItem.objects.get(id=item_id, basket=basket)
+            basket_item.count -= item_count
+            if basket_item.count <= 0:
+                basket_item.delete()
+            else:
+                basket_item.save()
+            products = ProductInstance.objects.filter(id=basket_item.product_id, available=True).annotate(
+                reviews_count=Count('reviews'))
+            serializer = OrderBasketProductSerializer(products, many=True)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# class BasketViewSet(viewsets.ModelViewSet):
+#     """
+#     Корзина
+#     """
+#     queryset = Basket.objects.all()
+#     serializer_class = BasketSerializer
+#
+#     # form_class = BasketDeleteForm
+#
+#     def destroy(self, request, *args, **kwargs):
+#         instance = self.get_object()
+#         serializer = self.get_serializer(instance)
+#         self.perform_destroy(instance)
+#         return Response(serializer.data)
+
+
+class OrderAPIView(ListCreateAPIView):
+    """
+    Заказы
+    """
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+
+
+# class OrderAPIView(APIView):
+#     """
+#     Заказы
+#     """
+#     def get(self, request):
+#         queryset = Order.objects.all()
+#         serializer = OrderSerializer(queryset, many=True)
+#         return Response(serializer.data)
+#
+#     def post(self, request):
+#         serializer = OrderSerializer(data=request.data)
+#         if serializer.is_valid():
+#             order = serializer.save()
+#             return Response({'orderId': order.id}, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+#     def post(self, request, id):
+#         # Получаем данные из тела запроса
+#         data = request.data
+#
+#         # Создаем или обновляем заказ
+#         try:
+#             order = Order.objects.get(id=id)
+#             serializer = OrderSerializer(order, data=data)
+#         except Order.DoesNotExist:
+#             serializer = OrderSerializer(data=data)
+#
+#         # Валидируем данные и сохраняем или обновляем заказ
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+#         else:
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrderDetailAPIView(generics.RetrieveAPIView):
+    """
+    Экземпляр заказа
+    """
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+
+    # def create(self, request, *args, **kwargs):
+    #     instance = self.get_object()
+    #     serializer = self.get_serializer(instance, data=request.data)
+    #
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data, status=status.HTTP_200_OK)
+    #     else:
+    #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PaymentCardAPIView(generics.CreateAPIView):
+    """
+    Оплата (карта оплаты)
+    """
+    serializer_class = PaymentCardSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        number = serializer.validated_data.get('number')
+        if int(number) % 2 != 0 or len(str(number)) > 8:
+            return Response({'error': 'Invalid card number'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save(owner=request.user)
+        # return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_200_OK)

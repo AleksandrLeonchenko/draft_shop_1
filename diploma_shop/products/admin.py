@@ -43,7 +43,7 @@ class ProductInstanceAdmin(admin.ModelAdmin):
         'updated_date',
         'archived',
         'category',
-        # 'limited_quantity',
+        'order'
     )
     list_display_links = (
         'id',
@@ -57,7 +57,7 @@ class ProductInstanceAdmin(admin.ModelAdmin):
         'updated_date',
         'archived',
         'category',
-        # 'limited_quantity',
+        'order'
     )
     list_filter = ('available', 'date')
     prepopulated_fields = {"slug": ("title",)}
@@ -71,11 +71,6 @@ class ProductInstanceAdmin(admin.ModelAdmin):
             return mark_safe(f"<img src='{object.image.url}' width=50>")
 
     get_html_image.short_description = "Миниатюра"
-
-    # def description_short(self, obj: ProductInstance):
-    #     if len(obj.description) < 48:
-    #         return obj.description
-    #     return obj.description[:48] + "..."
 
     def description_short(self, object) -> str:
         if len(object.description) < 15:
@@ -112,9 +107,6 @@ class CategoryImagesAdmin(admin.ModelAdmin):
 
 
 class AvatarsImagesAdmin(admin.ModelAdmin):
-    # list_display = ('id', 'title', 'src')
-    # list_display_links = ('id', 'title', 'src')
-    # search_fields = ('title',)
     list_display = ('id', 'alt', 'src')
     list_display_links = ('id', 'alt', 'src')
     search_fields = ('alt',)
@@ -124,9 +116,7 @@ class ReviewAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'author',
-        # 'email',
         'rate',
-        # 'ip',
         'text',
         'date',
         'active',
@@ -136,16 +126,12 @@ class ReviewAdmin(admin.ModelAdmin):
     list_display_links = (
         'id',
         'author',
-        # 'email',
         'rate',
-        # 'ip',
         'text',
         'date',
-        # 'active'
     )
     list_editable = ('active',)
     search_fields = ('author', 'product')
-    # prepopulated_fields = {"slug": ("product",)}
 
 
 class ProfileAdmin(admin.ModelAdmin):
@@ -184,87 +170,83 @@ class RateAdmin(admin.ModelAdmin):
     ]
     search_fields = ['id', 'value']
     ordering = ['id']
-    # prepopulated_fields = {"slug": ("value",)}
-
-
-# class RatingAdmin(admin.ModelAdmin):
-#     list_display = [
-#         'id',
-#         'rating_value',
-#         'product',
-#         'ip',
-#         'author',
-#     ]
-#     list_display_links = [
-#         'id',
-#         'rating_value',
-#         'product',
-#         'ip',
-#         'author',
-#     ]
-#     search_fields = ['id', 'rating_value']
-#     ordering = ['id']
-#     # prepopulated_fields = {"slug": ("rating_value",)}
-
-
-class PurchaseListAdmin(admin.ModelAdmin):
-    list_display = [
-        'id',
-        'user',
-        'payment_method',
-        'delivery_method',
-        'payment_status',
-        'delivery_status',
-        'time_create',
-        'price',
-    ]
-    list_display_links = [
-        'id',
-        'user',
-        'payment_method',
-        'delivery_method',
-        'payment_status',
-        'delivery_status',
-        'time_create',
-        'price',
-    ]
-    search_fields = ['id', 'user']
-    ordering = ['id']
 
 
 class OrderAdmin(admin.ModelAdmin):
-    # change_list_template = "shop/orders_changelist.html"
     list_display = [
         'id',
-        'created',
-        'updated',
-        'user',
+        'createdAt',
+        'profile',
         'status',
-        'payment'
+        'deliveryType',
+        'paymentType',
+        'totalCost',
+        'city',
+        'address'
     ]
     list_display_links = [
         'id',
-        'created',
-        'updated',
-        'user',
+        'createdAt',
+        'profile',
         'status',
-        'payment'
+        'deliveryType',
+        'paymentType',
+        'totalCost',
+        'city',
+        'address'
     ]
     search_fields = ['id']
     ordering = ['id']
 
 
-class OrderItemAdmin(admin.ModelAdmin):
+class BasketAdmin(admin.ModelAdmin):
     list_display = [
         'id',
-        'price',
-        'quantity',
+        'user',
+    ]
+    list_display_links = [
+        'id',
+        'user',
+    ]
+    search_fields = ['id']
+    ordering = ['id']
+
+
+class BasketItemAdmin(admin.ModelAdmin):
+    list_display = [
+        'id',
+        'basket',
+        'count',
         'product'
     ]
     list_display_links = [
         'id',
-        'price',
-        'quantity'
+        'basket',
+        'count',
+        'product'
+    ]
+    search_fields = ['id']
+    ordering = ['id']
+
+
+class PaymentCardAdmin(admin.ModelAdmin):
+    list_display = [
+        'id',
+        'owner',
+        'number',
+        'name',
+        'month',
+        'year',
+        'code'
+    ]
+    list_display_links = [
+        'id',
+        'owner',
+        'number',
+        'name',
+        'month',
+        'year',
+        'code'
     ]
     search_fields = ['id']
     ordering = ['id']
@@ -279,11 +261,12 @@ admin.site.register(CategoryImages, CategoryImagesAdmin)
 admin.site.register(AvatarsImages, AvatarsImagesAdmin)
 admin.site.register(Review, ReviewAdmin)
 admin.site.register(Profile, ProfileAdmin)
-admin.site.register(PurchaseList, PurchaseListAdmin)
 admin.site.register(Tag, TagAdmin)
 admin.site.register(Rate, RateAdmin)
 admin.site.register(Order, OrderAdmin)
-admin.site.register(OrderItem, OrderItemAdmin)
+admin.site.register(Basket, BasketAdmin)
+admin.site.register(BasketItem, BasketItemAdmin)
+admin.site.register(PaymentCard, PaymentCardAdmin)
 
 admin.site.site_title = 'Админ-панель сайта diploma_shop'
 admin.site.site_header = 'Админ-панель сайта diploma_shop'

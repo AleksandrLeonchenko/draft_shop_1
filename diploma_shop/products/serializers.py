@@ -12,7 +12,7 @@ from .models import *
 
 
 class FilterReviewListSerializer(serializers.ListSerializer):
-    """Фильтр комментариев, только parents"""
+    """Фильтр комментариев комментариев, (parents)"""
 
     def to_representation(self, data):
         data = data.filter(parent=None)
@@ -20,88 +20,23 @@ class FilterReviewListSerializer(serializers.ListSerializer):
 
 
 class RecursiveSerializer(serializers.Serializer):
-    """Вывод рекурсивно children"""
+    """Для рекурсивного вывода children, если понадобится"""
 
     def to_representation(self, value):
         serializer = self.parent.parent.__class__(value, context=self.context)
         return serializer.data
 
 
-# class RatingCreateSerializer(serializers.ModelSerializer):
-#     """
-#     Добавление отзыва
-#     """
-#
-#     class Meta:
-#         model = Rating
-#         fields = (
-#             'rating_value',
-#             # 'product',
-#         )
-#
-#     def create(self, validated_data):
-#         rating = Rating.objects.update_or_create(
-#             # ip=validated_data.get('ip', None),
-#             product=validated_data.get('product', None),
-#             author=validated_data.get('author', None),
-#             # rating_value=validated_data.get('rating_value', None),
-#             defaults={'rating_value': validated_data.get('rating_value')}
-#         )
-#         return rating
-
-
-# class RatingSerializer(serializers.ModelSerializer):
-#     """
-#     Добавление отзыва
-#     """
-#     rating_value = serializers.SlugRelatedField(slug_field='value', read_only=True)
-#
-#     class Meta:
-#         model = Rating
-#         # fields = (
-#         #     'rating_value',
-#         #     'product',
-#         # )
-#         fields = "__all__"
-
-
-# class ReviewCreateSerializer(serializers.ModelSerializer):
-#     """
-#     Добавление отзыва, версия 1
-#     """
-#
-#     class Meta:
-#         model = Review
-#         fields = "__all__"
-#         # exclude = ('product',)
-#
-#     def create(self, validated_data):
-#         review = Review.objects.update_or_create(
-#             # ip=validated_data.get('ip', None),
-#             product=validated_data.get('product', None),
-#             active=validated_data.get('active', None),
-#             text=validated_data.get('text', None),
-#             defaults={'author': validated_data.get('author'), 'rate': validated_data.get('rate')}
-#         )
-#         return review
-
-
 class ReviewCreateSerializer(serializers.ModelSerializer):
     """
-    Добавление отзыва, версия 2
+    Добавление отзыва
     """
 
     class Meta:
         model = Review
-        # fields = "__all__"
         fields = (
-            # 'author',
-            # 'email',
-            # 'date',
             'text',
             'rate',
-            # 'product',
-            # 'children_review',
         )
 
     def create(self, validated_data):
@@ -116,19 +51,10 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
         return review
 
 
-# class UserSerializer(serializers.ModelSerializer):
-#
-#
-#     class Meta:
-#         model = User
-#         # fields = "__all__"
-#         fields = (
-#             'id',
-#             'email',
-#             'username',
-#             'first_name',
-#         )
 class UserSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор модели User
+    """
     class Meta:
         model = User
         fields = ('email',)
@@ -136,28 +62,25 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     """
-    Вывод отзыва, версия 1
+    Вывод отзыва
     """
-
-    # queryset = ProductInstance.objects.filter(available=True).annotate(reviews1=Count('reviews'))
-    # children_review = RecursiveSerializer(many=True)
     author = serializers.SlugRelatedField(slug_field='username', read_only=True)
-
-    # author = serializers.SlugRelatedField(slug_field='email', read_only=True)
     # email = UserSerializer(many=True)
-    # email1 = serializers.EmailField(source='email')
+    # email = serializers.EmailField(source='email')
+    email = serializers.SerializerMethodField()
+
+    def get_email(self, obj):
+        return obj.author.email
 
     class Meta:
         # list_serializer_class = FilterReviewListSerializer
         model = Review
         fields = (
             'author',
-            # 'email',
-            # 'email1',
+            'email',
             'date',
             'text',
             'rate',
-            # 'product',
             # 'children_review',
         )
 
@@ -178,7 +101,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 class CategoryImageSerializer(serializers.ModelSerializer):
     """
-    Вывод изображений продукта
+    Вывод изображений категории
     """
 
     class Meta:
@@ -275,31 +198,6 @@ class ProductListSerializer(serializers.ModelSerializer):
         )
 
 
-# class ProductPopularSerializer(serializers.ModelSerializer):
-#     images = ProductImageSerializer(many=True, read_only=True)
-#     tags = TagSerializer(many=True, read_only=True)
-#     reviews = serializers.SerializerMethodField()
-#
-#     class Meta:
-#         model = ProductInstance
-#         fields = (
-#             'id',
-#             'category',
-#             'price',
-#             'count',
-#             'date',
-#             'title',
-#             'description',
-#             'freeDelivery',
-#             'images',
-#             'tags',
-#             'reviews',
-#             'rating'
-#         )
-#
-#     def get_reviews(self, instance):
-#         return instance.get_review().count()
-
 class ProductSalesSerializer(serializers.ModelSerializer):
     """
     Список продуктов для распродажи
@@ -331,29 +229,18 @@ class ProductSalesSerializer(serializers.ModelSerializer):
     def get_dateTo(self, obj):
         return obj.dateTo.strftime("%m-%d")
 
+
 class PropertyTypeProductSerializer(serializers.ModelSerializer):
     """
     Вывод названий характеристик продукта
     """
 
-    # children_review = RecursiveSerializer(many=True)
-    # author = serializers.SlugRelatedField(slug_field='username', read_only=True)
-
     class Meta:
-        # list_serializer_class = FilterReviewListSerializer
         model = PropertyTypeProduct
         fields = (
             'category',
-            # 'email',
-            # 'date',
             'name',
-            # 'rate',
-            # 'rate_review',
-            # 'xxx',
             'product',
-            # 'children_review',
-            # 'rating_user2',
-            # 'product_review',
         )
 
 
@@ -372,32 +259,11 @@ class PropertyInstanceProductSerializer(serializers.ModelSerializer):
         )
 
 
-# class ProductLimitedSerializer(serializers.ModelSerializer):
-#     reviews_count = serializers.IntegerField()
-#
-#     class Meta:
-#         model = ProductInstance
-#         fields = (
-#             'id',
-#             # 'title',
-#             # 'item_number',
-#             'freeDelivery',
-#             'price',
-#             'count',
-#             'available',
-#             'archived',
-#             'category',
-#             # 'reviews',
-#             'reviews_count',
-#             'date',
-#         )
-
-
 class ProductDetailSerializer(serializers.ModelSerializer):
-    # category = serializers.SlugRelatedField(slug_field='title', read_only=True)
-    # tags = serializers.SlugRelatedField(slug_field='name', read_only=True, many=True)
+    """
+    Вывод конкретного продукта
+    """
     tags = TagSerializer(many=True)
-    # tags2 = serializers.CharField(source='description')
     reviews = ReviewSerializer(many=True)
     images = ProductImageSerializer(many=True)
     specifications = PropertyInstanceProductSerializer(many=True)
@@ -418,297 +284,35 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'freeDelivery',
             'images',
             'tags',
-            # 'tags2',
-            # 'available',
-            # 'archived',
             'reviews',
-            # 'reviews2',
-            # 'rating_user',
-            # 'middle_star',
             'specifications',
             'rating',
-            # 'product_rating',
         )
 
-
-# class RatingCreateSerializer(serializers.ModelSerializer):
-#     """
-#     Добавление отзыва
-#     """
-#
-#     class Meta:
-#         model = Rating
-#         fields = (
-#             'rate',
-#             'product',
-#         )
-#
-#     def create(self, validated_data):
-#         rating = Rating.objects.update_or_create(
-#             ip=validated_data.get('ip', None),
-#             product=validated_data.get('product', None),
-#             author=validated_data.get('author', None),
-#             defaults={'rate': validated_data.get('rate')}
-#         )
-#         return rating
-
-
-class OrderSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Order
-        fields = (
-            'id',
-            'created',
-            'updated',
-            'user',
-            'status'
-            'payment',
-        )
-
-
-# class GroupSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Group
-#         fields = ('pk', 'name')
-
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     email = serializers.EmailField(source='user.email')
-#
-#     class Meta:
-#         model = Profile
-#         # fields = "__all__"
-#         fields = (
-#             'fullName',
-#             'email',
-#             'phone',
-#             # 'avatar',
-#         )
-#
-#     def save(self):
-#         profile = Profile(fullName=self.validated_data['fullName'], phone=self.validated_data['phone'])
-#         profile.save()
-#         return profile
-
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     """
-#     Профиль ИИ, 1
-#     """
-#     class Meta:
-#         model = Profile
-#         fields = '__all__'
-#         extra_kwargs = {'slug': {'read_only': True}}
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     email = serializers.EmailField(source='user.email', read_only=True)
-#
-#     class Meta:
-#         model = Profile
-#         fields = ('fullName', 'avatar', 'phone', 'email')
-#
-#     def to_representation(self, instance):
-#         representation = super().to_representation(instance)
-#         return {k: v for k, v in representation.items() if v is not None}
-
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     email = serializers.EmailField(source='user.email')
-#     avatar = serializers.PrimaryKeyRelatedField(queryset=AvatarsImages.objects.all(), allow_null=True)
-#
-#     class Meta:
-#         model = Profile
-#         fields = ('fullName', 'email', 'phone', 'avatar')
-#
-#     def create(self, validated_data):
-#         avatar_data = validated_data.pop('avatar', None)
-#         email = validated_data.pop('user').get('email')
-#         user, created = User.objects.get_or_create(email=email)
-#         profile = Profile.objects.create(user=user, **validated_data)
-#         if avatar_data:
-#             profile.avatar = avatar_data
-#             profile.save()
-#         return profile
-
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     email = serializers.EmailField(source='user.email')
-#     avatar = serializers.SerializerMethodField()
-#
-#     class Meta:
-#         model = Profile
-#         fields = ('fullName', 'email', 'phone', 'avatar')
-#
-#     def get_avatar(self, obj):
-#         avatar_instance = obj.avatar
-#         if avatar_instance:
-#             serializer = ProfileImageSerializer(avatar_instance)
-#             return serializer.data
-#         return None
-
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     email = serializers.EmailField(source='user.email')
-#     # avatar = serializers.PrimaryKeyRelatedField(queryset=AvatarsImages.objects.all(), allow_null=True)
-#     avatar = ProfileImageSerializer()
-#
-#     class Meta:
-#         model = Profile
-#         fields = ('fullName', 'email', 'phone', 'avatar')
-#
-#     def create(self, validated_data):
-#         avatar_data = validated_data.pop('avatar', None)
-#         email = validated_data.pop('user').get('email')
-#         user, created = User.objects.get_or_create(email=email)
-#         profile = Profile.objects.create(user=user, **validated_data)
-#         if avatar_data:
-#             profile.avatar = avatar_data
-#             profile.save()
-#         return profile
-#
-#     def update(self, instance, validated_data):
-#         avatar_data = validated_data.pop('avatar', None)
-#         for key, value in validated_data.items():
-#             setattr(instance, key, value)
-#         if avatar_data:
-#             instance.avatar = avatar_data
-#         instance.save()
-#         return instance
-
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     email = serializers.EmailField(source='user.email')
-#     avatar = ProfileImageSerializer()
-#
-#     class Meta:
-#         model = Profile
-#         fields = ('fullName', 'email', 'phone', 'avatar')
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     email = serializers.EmailField(source='user.email')
-#     avatar = ProfileImageSerializer()
-#
-#     class Meta:
-#         model = Profile
-#         fields = ('fullName', 'email', 'phone', 'avatar')
-#
-#     def create(self, validated_data):
-#         avatar_data = validated_data.pop('avatar', None)
-#         email = validated_data.pop('user').get('email')
-#
-#         user, created = User.objects.get_or_create(email=email)
-#         profile = Profile.objects.create(user=user, **validated_data)
-#
-#         if avatar_data:
-#             avatar = AvatarsImages.objects.create(**avatar_data)
-#             profile.avatar = avatar
-#             profile.save()
-#
-#         return profile
-
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     email = serializers.EmailField(source='user.email')
-#     avatar = ProfileImageSerializer()
-#
-#     class Meta:
-#         model = Profile
-#         fields = ('fullName', 'email', 'phone', 'avatar')
-#
-#     def create(self, validated_data):
-#         avatar_data = validated_data.pop('avatar', None)
-#         email = validated_data.pop('user').get('email')
-#         user, created = User.objects.get_or_create(email=email)
-#         profile = Profile.objects.create(user=user, **validated_data)
-#
-#         if avatar_data:
-#             profile.avatar = avatar_data
-#             profile.save()
-#
-#         return profile
-#
-#     def update(self, instance, validated_data):
-#         avatar_data = validated_data.pop('avatar', None)
-#
-#         for key, value in validated_data.items():
-#             setattr(instance, key, value)
-#
-#         if avatar_data:
-#             if instance.avatar:
-#                 instance.avatar.src = avatar_data.get('src', instance.avatar.src)
-#                 instance.avatar.alt = avatar_data.get('alt', instance.avatar.alt)
-#                 instance.avatar.save()
-#             else:
-#                 avatar = AvatarsImages.objects.create(**avatar_data)
-#                 instance.avatar = avatar
-#
-#         instance.save()
-#         return instance
-
-
-# class ProfileSerializer(serializers.ModelSerializer):
-#     # email = serializers.EmailField(source='user.email')
-#     email = serializers.EmailField(source='user.email', allow_null=True, allow_blank=True) #email не обновляется, но фронтом отображается
-#     # email = serializers.EmailField(allow_null=True, allow_blank=True) #email обновляется, но фронтом не отображается
-#     avatar = ProfileImageSerializer()
-#
-#     class Meta:
-#         model = Profile
-#         fields = ('fullName', 'email', 'phone', 'avatar')
-#         # fields = ('fullName', 'phone', 'avatar')
-#
-#     def create(self, validated_data):
-#         avatar_data = validated_data.pop('avatar', None)
-#         # email = validated_data.pop('user').get('email')
-#         email = validated_data.get('user.email')
-#         # user, created = User.objects.get_or_create(email=email)
-#         user, created = User.objects.get_or_create(email=email)
-#         profile = Profile.objects.create(user=user, **validated_data)
-#         # if avatar_data:
-#         #     profile.avatar = avatar_data
-#         #     profile.save()
-#         if avatar_data:
-#             avatar, created = AvatarsImages.objects.get_or_create(**avatar_data)
-#             profile.avatar = avatar
-#             profile.save()
-#         return profile
-#
-#     def update(self, instance, validated_data):
-#         avatar_data = validated_data.pop('avatar', None)
-#         # avatar_data = validated_data.get('avatar', None)
-#         # email = validated_data.get('user', {}).get('email')
-#         email = validated_data.get('user.email')
-#         # email = validated_data.get('email')
-#         print('----****--avatar_data--', avatar_data)
-#         print('----****--validated_data--', validated_data)
-#         print('----****--email--', email)
-#         # if email:
-#         if email is not None and email != instance.user.email:
-#             instance.user.email = email
-#             instance.user.save()
-#
-#         for key, value in validated_data.items():
-#             setattr(instance, key, value)
-#         if avatar_data:
-#             avatar, created = AvatarsImages.objects.get_or_create(**avatar_data)
-#             instance.avatar = avatar
-#         instance.save()
-#         return instance
 
 class ProfileSerializer(serializers.ModelSerializer):
     """
-    email обновляется, но фронтом не отображается и аватар нужно обязятельно при обновлении загружать
+    Профиль, email обновляется, но фронтом не отображается и аватар нужно обязятельно при обновлении загружать
     """
-    email = serializers.EmailField(source='user.email', allow_null=True, allow_blank=True) #email не обновляется, но фронтом отображается
+    email = serializers.EmailField(
+        source='user.email',
+        allow_null=True,
+        allow_blank=True
+    )  # email не обновляется, но фронтом отображается
     # email = serializers.EmailField(allow_null=True, allow_blank=True) #email обновляется, но фронтом не отображается
     avatar = ProfileImageSerializer(required=False)
 
     class Meta:
         model = Profile
-        fields = ('fullName', 'email', 'phone', 'avatar')
+        fields = (
+            'fullName',
+            'email',
+            'phone',
+            'avatar'
+        )
 
     def create(self, validated_data):
-        avatar_data = validated_data.pop('avatar',)
+        avatar_data = validated_data.pop('avatar', )
         email = validated_data.get('user.email')
 
         user, created = User.objects.get_or_create(email=email)
@@ -739,6 +343,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
 class SignUpSerializer(serializers.Serializer):
     """
     Регистрация, работает в рест, не работает во фронте, возможно 'name' это не 'fullName'
@@ -754,7 +359,7 @@ class SignUpSerializer(serializers.Serializer):
 
 # class SignUpSerializer(serializers.ModelSerializer):
 #     """
-#     Регистрация, работает 1
+#     Регистрация, работает
 #     """
 #     name = serializers.CharField(source='first_name')
 #
@@ -763,17 +368,9 @@ class SignUpSerializer(serializers.Serializer):
 #         fields = ['name', 'username', 'password']
 
 
-# class SignInSerializer(serializers.ModelSerializer):
-#     # name = serializers.CharField(source='first_name')
-#
-#     class Meta:
-#         model = User
-#         fields = ['username', 'password']
-
-
 # class SignInSerializer(serializers.Serializer):
 #     """
-#         работает 1
+#     Вход, работает
 #     """
 #     username = serializers.CharField(
 #         label="Username",
@@ -781,60 +378,40 @@ class SignUpSerializer(serializers.Serializer):
 #     )
 #     password = serializers.CharField(
 #         label="Password",
-#         # This will be used when the DRF browsable API is enabled
 #         style={'input_type': 'password'},
 #         trim_whitespace=False,
 #         write_only=True
 #     )
 #
 #     def validate(self, attrs):
-#         # Take username and password from request
 #         username = attrs.get('username')
 #         password = attrs.get('password')
 #
 #         if username and password:
-#             # Try to authenticate the user using Django auth framework.
 #             user = authenticate(request=self.context.get('request'),
 #                                 username=username, password=password)
 #             if not user:
-#                 # If we don't have a regular user, raise a ValidationError
 #                 msg = 'Access denied: wrong username or password.'
 #                 raise serializers.ValidationError(msg, code='authorization')
 #         else:
 #             msg = 'Both "username" and "password" are required.'
 #             raise serializers.ValidationError(msg, code='authorization')
-#         # We have a valid user, put it in the serializer's validated_data.
-#         # It will be used in the view.
 #         attrs['user'] = user
 #         return attrs
 
 
 class LoginSerializer(serializers.Serializer):
     """
-    ии
+    Вход
     """
     username = serializers.CharField(max_length=50)
     password = serializers.CharField(max_length=50)
 
 
-# class ProfileAvatarSerializer(serializers.ModelSerializer):
-#     avatar = ProfileImageSerializer(required=False)
-#
-#     class Meta:
-#         model = Profile
-#         fields = ('avatar',)
-#
-#     def update(self, instance, validated_data):
-#         avatar_data = validated_data.pop('avatar', None)
-#
-#         if avatar_data is not None:
-#             avatar, created = AvatarsImages.objects.get_or_create(**avatar_data)
-#             instance.avatar = avatar
-#
-#         instance.save()
-#         return instance
-
 class ProfileAvatarSerializer(serializers.ModelSerializer):
+    """
+    Аватар
+    """
     avatar = serializers.PrimaryKeyRelatedField(
         queryset=AvatarsImages.objects.all(),
         allow_null=True,
@@ -850,3 +427,299 @@ class ProfileAvatarSerializer(serializers.ModelSerializer):
         instance.avatar = avatar
         instance.save()
         return instance
+
+
+# class BasketItemSerializer(serializers.ModelSerializer):
+#     """
+#     Корзина
+#     """
+#     # product = ProductListSerializer()
+#     # product = serializers.IntegerField(read_only=True)  # Для POST-запроса по id, не работает
+#     product = serializers.IntegerField()  # Для POST-запроса по product, работает, но не на фронте
+#     # id = serializers.IntegerField(source='product.id')  # Поле id указывает на атрибут id продукта, не работает
+#     count = serializers.IntegerField()
+#
+#     class Meta:
+#         model = BasketItem
+#         fields = (
+#             # 'id',
+#             'product',
+#             'count',
+#         )
+
+
+class BasketItemSerializer(serializers.ModelSerializer):
+    """
+    Продукт и его количество из корзины
+    """
+    product = serializers.PrimaryKeyRelatedField(queryset=ProductInstance.objects.all())
+    count = serializers.IntegerField()
+
+    class Meta:
+        model = BasketItem
+        fields = (
+            'id',
+            'product',
+            'count',
+        )
+
+
+# class BasketProductSerializer(serializers.ModelSerializer):
+#     """
+#     Данные продукта из корзины
+#     """
+#     tags = TagSerializer(many=True, read_only=True)
+#     images = ProductImageSerializer(many=True, read_only=True)
+#     reviews = serializers.IntegerField(source='reviews_count', read_only=True)
+#     rating = serializers.FloatField()
+#     date = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)')
+#     count = serializers.IntegerField()
+#     # items = BasketItemSerializer(many=True, read_only=True)
+#     items = BasketItemSerializer(many=True, read_only=True, source='product_basketitem')
+#
+#     class Meta:
+#         model = ProductInstance
+#         fields = (
+#             'id',
+#             'category',
+#             'price',
+#             'count',
+#             'date',
+#             'title',
+#             'description',
+#             'freeDelivery',
+#             'images',
+#             'tags',
+#             'reviews',
+#             'rating',
+#             'items'
+#         )
+#
+#     def to_representation(self, instance):
+#         representation = super().to_representation(instance)
+#
+#         basket_items = BasketItem.objects.filter(product=instance)
+#         first_item = basket_items.first()
+#         if first_item:
+#             count = first_item.count
+#             representation['count'] = count
+#
+#         return representation
+
+
+class BasketProductSerializer(serializers.ModelSerializer):
+    """
+    Данные продукта из корзины
+    """
+    tags = TagSerializer(many=True, read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
+    reviews = serializers.IntegerField(source='reviews_count', read_only=True)
+    rating = serializers.FloatField()
+    date = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)')
+    count = serializers.IntegerField()
+    items = BasketItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ProductInstance
+        fields = (
+            'id',
+            'category',
+            'price',
+            'count',
+            'date',
+            'title',
+            'description',
+            'freeDelivery',
+            'images',
+            'tags',
+            'reviews',
+            'rating',
+            'items'
+        )
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        basket_items = BasketItem.objects.filter(product=instance)
+        first_item = basket_items.first()
+        if first_item:
+            count = first_item.count
+            representation['count'] = count
+
+        return representation
+
+
+class BasketSerializer(serializers.ModelSerializer):
+    """
+    Чья корзина
+    """
+    items = BasketItemSerializer(many=True, read_only=True)
+    # items = BasketItemSerializer(many=True, read_only=True, source='items')
+    # items = BasketProductSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Basket
+        # fields = '__all__'
+        fields = (
+            'id',
+            'items'
+        )
+
+
+class DeleteBasketItemSerializer(serializers.Serializer):
+    """
+    Для удаления корзины
+    """
+    id = serializers.IntegerField()
+    count = serializers.IntegerField()
+
+
+class OrderBasketProductSerializer(serializers.ModelSerializer):
+    """
+    Данные продукта из заказа
+    """
+    tags = TagSerializer(many=True, read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
+    reviews = serializers.IntegerField(source='reviews_count', read_only=True)
+    rating = serializers.FloatField()
+    date = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)')
+    count = serializers.IntegerField()
+    items = BasketItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ProductInstance
+        fields = (
+            'id',
+            'category',
+            'price',
+            'count',
+            'date',
+            'title',
+            'description',
+            'freeDelivery',
+            'images',
+            'tags',
+            'reviews',
+            'rating',
+            'items',
+        )
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        # Добавляем поле reviews в representation
+        reviews = ProductInstance.objects.filter(available=True, id=instance.id).annotate(
+            reviews_count=Count('reviews')).values('reviews_count').first()
+        if reviews:
+            representation['reviews'] = reviews['reviews_count']
+        else:
+            representation['reviews'] = 0
+        # Добавляем поле count в representation
+        basket_items = BasketItem.objects.filter(product=instance)
+        first_item = basket_items.first()
+        if first_item:
+            count = first_item.count
+            representation['count'] = count
+        return representation
+
+
+class OrderBasketItemSerializer(serializers.ModelSerializer):
+    """
+    Продукт и его количество из заказа
+    """
+    product = serializers.SerializerMethodField()
+
+    def get_product(self, obj):
+        return OrderBasketProductSerializer(obj.product).data
+
+    class Meta:
+        model = BasketItem
+        # fields = '__all__'
+        fields = ('product',)
+
+
+class OrderBasketSerializer(serializers.ModelSerializer):
+    """
+    Чья корзина из заказа
+    """
+    items = serializers.SerializerMethodField()
+
+    def get_items(self, obj):
+        products = obj.products.all()
+        product_data = []
+        for product in products:
+            product_serialized = OrderBasketProductSerializer(product).data
+            product_data.append(product_serialized)
+        return product_data
+
+    class Meta:
+        model = Basket
+        fields = (
+            'items',
+        )
+
+
+class OrderSerializer(serializers.ModelSerializer):  # наверно нужно будет убрать поле profile из модели (есть user)
+    """
+    Заказ
+    """
+    fullName = serializers.CharField(source='profile.fullName')
+    email = serializers.EmailField(source='profile.user.email')
+    phone = serializers.CharField(source='profile.phone')
+
+    # fullName = serializers.CharField(source='basket.user.profile.fullName')
+    # email = serializers.EmailField(source='basket.user.email')
+    # phone = serializers.CharField(source='basket.user..phone')
+
+    createdAt = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)', required=False)
+    products = serializers.SerializerMethodField()
+    totalCost = serializers.SerializerMethodField()
+
+    deliveryType = serializers.CharField(source='get_deliveryType_display')
+    paymentType = serializers.CharField(source='get_paymentType_display')
+    status = serializers.CharField(source='get_status_display')
+
+    def get_products(self, obj):
+        products = obj.basket.products.all()  # Обращаюсь к атрибуту "products" через связь с объектом "Basket"
+        product_data = []
+        for product in products:
+            product_serialized = OrderBasketProductSerializer(product).data
+            product_data.append(product_serialized)
+        return product_data
+
+    def get_totalCost(self, obj):
+        return obj.calculate_total_cost()
+
+    def create(self, validated_data):
+        basket_data = validated_data.pop('basket')
+        order = Order.objects.create(**validated_data)
+        basket = Basket.objects.create(order=order, **basket_data)
+        basket.calculate_total_cost()  # Рассчитываем и сохраняем суммарную стоимость продуктов в корзине
+        return order
+
+    class Meta:
+        model = Order
+        fields = (
+            'id',
+            'createdAt',
+            'fullName',
+            'email',
+            'phone',
+            'deliveryType',
+            'paymentType',
+            'totalCost',
+            'status',
+            'city',
+            'address',
+            'products',
+        )
+
+
+class PaymentCardSerializer(serializers.ModelSerializer):
+    """
+    Оплата (карта)
+    """
+    class Meta:
+        model = PaymentCard
+        exclude = ['id', 'owner']
+        # fields = '__all__'
