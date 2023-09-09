@@ -447,7 +447,8 @@ class Profile(models.Model):
         # User,
         to=User,
         on_delete=models.CASCADE,
-        related_name='shop_profile_user',
+        # related_name='shop_profile_user',
+        related_name='profile',
         verbose_name='Пользователь'
     )
     slug = AutoSlugField(
@@ -494,99 +495,6 @@ class Profile(models.Model):
 
     def __str__(self):
         return f'{self.user.username} (Profile)'
-
-
-# class PurchaseList(models.Model):
-#     """
-#     Модель списка покупок пользователя
-#     """
-#     user = models.OneToOneField(
-#         # User,
-#         to=User,
-#         on_delete=models.CASCADE,
-#         related_name='user_purchase_list',
-#         verbose_name='user'
-#     )
-#     METHOD_PAYMENT = (
-#         (1, 'карта'),
-#         (2, 'счёт'),
-#     )
-#     METHOD_DELIVERY = (
-#         (1, 'доставка'),
-#         (2, 'экспресс-доставка'),
-#     )
-#     STATUS_PAYMENT = (
-#         (1, 'не оплачено'),
-#         (2, 'оплачено'),
-#         (3, 'возврат оплаты'),
-#     )
-#     STATUS_DELIVERY = (
-#         (1, 'доставлено'),
-#         (2, 'доставляется'),
-#         (3, 'не доставлено'),
-#         (4, 'возврат продукта'),
-#     )
-#     payment_method = models.IntegerField(
-#         null=True,
-#         choices=METHOD_PAYMENT,
-#         default=1,
-#         verbose_name="Способ оплаты"
-#     )
-#     delivery_method = models.IntegerField(
-#         null=True,
-#         choices=METHOD_DELIVERY,
-#         default=1,
-#         verbose_name="Способ доставки"
-#     )
-#     payment_status = models.IntegerField(
-#         null=True,
-#         choices=STATUS_PAYMENT,
-#         default=1,
-#         verbose_name="Статус оплаты"
-#     )
-#     delivery_status = models.IntegerField(
-#         null=True,
-#         choices=STATUS_DELIVERY,
-#         default=1,
-#         verbose_name="Статус доставки"
-#     )
-#     time_create = models.DateTimeField(
-#         auto_now_add=True,
-#         verbose_name=_('purchase time')
-#     )
-#     price = models.DecimalField(
-#         null=True,
-#         blank=True,
-#         max_digits=10,
-#         decimal_places=2,
-#         verbose_name='Общая стоимость заказа'
-#     )
-#     error_text = models.TextField(
-#         max_length=5000,
-#         blank=True,
-#         null=True,
-#         default=None,
-#         verbose_name='Текст ошибки'
-#     )
-#     product = models.ManyToManyField(
-#         'ProductInstance',
-#         related_name=_('product'),
-#         verbose_name="Продукт"
-#     )
-#     slug = models.SlugField(
-#         max_length=255,
-#         default='purchase',
-#         db_index=True,
-#         verbose_name='URL истории покупок'
-#     )
-#
-#     class Meta:
-#         ordering = ('time_create',)
-#         verbose_name = 'Список покупок пользователя'
-#         verbose_name_plural = 'Списки покупок пользователей'
-#
-#     def __str__(self):
-#         return f' Список покупок пользователя {self.user.username}'
 
 
 class Basket(models.Model):
@@ -686,13 +594,13 @@ class Order(models.Model):  # нужно будет убрать поле profil
     )
     city = models.CharField(max_length=100, default='yyy')
     address = models.CharField(max_length=100, default='xxx')
-    profile = models.ForeignKey(
-        'Profile',
-        on_delete=models.CASCADE,
-        default=1,
-        related_name='profile_order',
-        verbose_name='Покупатель'
-    )
+    # profile = models.ForeignKey(
+    #     'Profile',
+    #     on_delete=models.CASCADE,
+    #     default=1,
+    #     related_name='profile_order',
+    #     verbose_name='Покупатель'
+    # )
     basket = models.OneToOneField(
         'Basket',
         on_delete=models.CASCADE,
@@ -712,8 +620,8 @@ class Order(models.Model):  # нужно будет убрать поле profil
         return total_cost
 
     class Meta:
-        verbose_name = 'Параметры заказа'
-        verbose_name_plural = 'Параметры заказа'
+        verbose_name = 'Заказ'
+        verbose_name_plural = 'Заказы'
         ordering = ['pk']
 
 

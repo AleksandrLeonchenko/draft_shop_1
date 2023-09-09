@@ -4,13 +4,14 @@ import django_filters
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.db.models import Avg, Case, When, Sum, Count, Prefetch
+from django.db.models import Avg, Case, When, Sum, Count, Prefetch, Q
+from django.shortcuts import get_object_or_404
 from rest_framework import status, generics, filters
 from django.contrib.auth.models import Group
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework import permissions
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -42,7 +43,7 @@ class ProductListView(ListAPIView):
 
 class CatalogView(ListAPIView):
     """
-    Вывод каталога с сортировкой, окно с сортировкой не выводится в рест, но с "?" в строке работает,
+    Вывод каталога с сортировкой, окно с сортировкой не выводится в рест, с "?" в строке работает,
     но на фронте не работает.
     Сортировка по количеству покупок по возрастанию: ?sort_by=number_of_purchases&sort_direction=asc.
     Сортировка по цене по убыванию: ?sort_by=price&sort_direction=desc.
@@ -50,15 +51,54 @@ class CatalogView(ListAPIView):
     Сортировка по новизне по убыванию: ?sort_by=date&sort_direction=desc.
     Сортировка по количеству покупок по возрастанию и фильтрацией по цене: ?ordering=number_of_purchases&price=500
     Сортировка с фильтрацией по названию и тегам: ?title=video&tags=1,2,3
+
+    Поиск по по вхождению слова "школьник", по цене от 0 до 1000, freeDelyvery=True и available=True:
+    http://127.0.0.1:8000/api/catalog/?filter=школьник&minPrice=0&maxPrice=1000&freeDelyvery=True&available=True
+
+    Сортировка на фронте работает, но некорректно - либо по возрастанию либо по убыванию
     """
-    # queryset = ProductInstance.objects.filter(available=True)
+
     queryset = ProductInstance.objects.filter(available=True).annotate(reviews_count=Count('reviews'))
     serializer_class = ProductListSerializer
     pagination_class = CustomPaginationProducts
-    filter_backends = [OrderingFilter, DjangoFilterBackend]
+    filter_backends = [OrderingFilter, DjangoFilterBackend, filters.SearchFilter]  # Добавлен фильтр поиска
+    # filterset_class = ProductFilter
 
-    ordering_fields = ['number_of_purchases', 'price', 'reviews_count', 'date']
-    filterset_fields = ['title', 'price', 'count', 'freeDelivery', 'tags']
+    ordering_fields = ['rating', 'price', 'reviews_count', 'date']  # Поля для сортировки
+    filterset_fields = ['title', 'price', 'available', 'freeDelivery', 'tags']  # Поля для фильтрации
+    search_fields = ['title', 'description']  # Поля для поиска
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # Получаем параметры поиска из GET-запроса
+        search_text = self.request.GET.get('filter')
+        min_price = self.request.GET.get('minPrice')
+        max_price = self.request.GET.get('maxPrice')
+        free_delivery = self.request.GET.get('freeDelyvery')
+        available = self.request.GET.get('available')
+        ordering = self.request.GET.get('sort')
+
+        # Параметры поиска
+        if search_text:
+            # queryset = queryset.filter(
+            #     Q(title__icontains=search_text) | Q(description__icontains=search_text)
+            # )
+            queryset = queryset.filter(Q(title__icontains=search_text))
+        if min_price:
+            queryset = queryset.filter(price__gte=min_price)
+        if max_price:
+            queryset = queryset.filter(price__lte=max_price)
+        if free_delivery:
+            queryset = queryset.filter(freeDelivery=free_delivery)
+        if available:
+            queryset = queryset.filter(available=available)
+
+        # Сортировка результатов
+        if ordering in self.ordering_fields:
+            queryset = queryset.order_by(ordering)
+
+        return queryset
 
 
 class ProductPopularView(APIView):
@@ -152,6 +192,7 @@ class ReviewCreateView(APIView):
     """
     Добавление отзыва продукту
     """
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
         author = self.request.user
@@ -184,6 +225,7 @@ class ProfileView(APIView):
     и аватар нужно обязятельно при обновлении загружать
     """
     serializer_class = ProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         try:
@@ -207,26 +249,46 @@ class ProfileView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class SignInView(APIView):
+# class SignInView(APIView):
+#     """
+#     Вход
+#     """
+#     authentication_classes = [SessionAuthentication]
+#     serializer_class = LoginSerializer
+#
+#     def post(self, request):
+#         serializer = self.serializer_class(data=request.data)
+#         if serializer.is_valid():
+#             username = serializer.validated_data.get('username')
+#             password = serializer.validated_data.get('password')
+#
+#             user = authenticate(request, username=username, password=password)
+#
+#             if user is not None:
+#                 login(request, user)
+#                 return Response({'message': 'Вы успешно вошли в систему!'})
+#
+#         return Response({'error': 'Неверные учетные данные'})
+
+
+class LoginView(APIView):
     """
-    Вход
+    Вход в систему
     """
     authentication_classes = [SessionAuthentication]
-    serializer_class = LoginSerializer
+    permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            username = serializer.validated_data.get('username')
-            password = serializer.validated_data.get('password')
+        username = request.data.get('username')
+        password = request.data.get('password')
 
-            user = authenticate(request, username=username, password=password)
+        user = authenticate(request, username=username, password=password)
 
-            if user is not None:
-                login(request, user)
-                return Response({'message': 'Вы успешно вошли в систему!'})
+        if user is not None:
+            login(request, user)
+            return Response({'message': 'Вы успешно вошли в систему!'})
 
-        return Response({'error': 'Неверные учетные данные'})
+        return Response({'error': 'Неверные учетные данные'}, status=400)
 
 
 class SignUpView(APIView):
@@ -254,20 +316,32 @@ class SignUpView(APIView):
         return Response(serializer.errors)
 
 
-class SignOutView(APIView):
-    """
-    Выход
-    """
+# class SignOutView(APIView):
+#     """
+#     Выход
+#     """
+#
+#     def post(self, request: Request) -> Response:
+#         logout(request)
+#         return Response(status=status.HTTP_200_OK)
 
-    def post(self, request: Request) -> Response:
+
+class LogoutView(APIView):
+    """
+    Выход из системы
+    """
+    authentication_classes = [SessionAuthentication]
+
+    def post(self, request):
         logout(request)
-        return Response(status=status.HTTP_200_OK)
+        return Response({'message': 'Вы успешно вышли из системы!'})
 
 
 class ChangePasswordAPIView(APIView):
     """
     Смена пароля
     """
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         current_password = request.data.get('currentPassword')
@@ -293,6 +367,7 @@ class UpdateAvatarAPIView(APIView):
     """
     Смена аватара, не пойму для чего, но в свагере есть
     """
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = ProfileAvatarSerializer
 
     def post(self, request, *args, **kwargs):
@@ -310,33 +385,27 @@ class BasketView(APIView):
     """
     Корзина
     """
+    permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request):  # работает
-        basket = Basket.objects.get(user=request.user)
-        # basket_items = basket.basketitem_set.all()
+    def get(self, request):
+        basket = get_object_or_404(Basket, user=request.user)
         basket_items = basket.items.all()
-        product_ids = basket_items.values_list(
-            'product_id',
-            flat=True
-        )
+        product_ids = basket_items.values_list('product_id', flat=True)
         products = ProductInstance.objects.filter(id__in=product_ids, available=True).annotate(
             reviews_count=Count('reviews'))
-        serializer = OrderBasketProductSerializer(products, many=True)
+        serializer = BasketProductSerializer(products, many=True)
         return Response(serializer.data)
 
-    def post(self, request):  # Для POST-запроса по product, работает, но не на фронте
+    def post(self, request):
         serializer = BasketItemSerializer(data=request.data)
         if serializer.is_valid():
             basket = Basket.objects.get(user=request.user)
-            product_id = serializer.validated_data['product']
+            product_id = serializer.validated_data['id']
             count = serializer.validated_data['count']
             product = ProductInstance.objects.get(id=product_id)
-            basket_item = BasketItem.objects.create(
-                basket=basket,
-                product=product,
-                count=count
-            )
-            return Response(BasketProductSerializer(basket_item.product).data, status=status.HTTP_201_CREATED)
+            basket_item = BasketItem.objects.create(basket=basket, product=product, count=count)
+            serializer = BasketProductSerializer(basket_item.product)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request):
@@ -353,15 +422,12 @@ class BasketView(APIView):
                 basket_item.save()
             products = ProductInstance.objects.filter(id=basket_item.product_id, available=True).annotate(
                 reviews_count=Count('reviews'))
-            serializer = OrderBasketProductSerializer(products, many=True)
+            serializer = BasketProductSerializer(products, many=True)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # class BasketViewSet(viewsets.ModelViewSet):
-#     """
-#     Корзина
-#     """
 #     queryset = Basket.objects.all()
 #     serializer_class = BasketSerializer
 #
@@ -378,67 +444,33 @@ class OrderAPIView(ListCreateAPIView):
     """
     Заказы
     """
+    permission_classes = [permissions.IsAuthenticated]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-
-
-# class OrderAPIView(APIView):
-#     """
-#     Заказы
-#     """
-#     def get(self, request):
-#         queryset = Order.objects.all()
-#         serializer = OrderSerializer(queryset, many=True)
-#         return Response(serializer.data)
-#
-#     def post(self, request):
-#         serializer = OrderSerializer(data=request.data)
-#         if serializer.is_valid():
-#             order = serializer.save()
-#             return Response({'orderId': order.id}, status=status.HTTP_201_CREATED)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#
-#     def post(self, request, id):
-#         # Получаем данные из тела запроса
-#         data = request.data
-#
-#         # Создаем или обновляем заказ
-#         try:
-#             order = Order.objects.get(id=id)
-#             serializer = OrderSerializer(order, data=data)
-#         except Order.DoesNotExist:
-#             serializer = OrderSerializer(data=data)
-#
-#         # Валидируем данные и сохраняем или обновляем заказ
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response(serializer.data, status=status.HTTP_200_OK)
-#         else:
-#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class OrderDetailAPIView(generics.RetrieveAPIView):
     """
     Экземпляр заказа
     """
+    permission_classes = [permissions.IsAuthenticated]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
 
-    # def create(self, request, *args, **kwargs):
-    #     instance = self.get_object()
-    #     serializer = self.get_serializer(instance, data=request.data)
-    #
+    # def post(self, request, *args, **kwargs):
+    #     order = self.get_object()
+    #     serializer = self.serializer_class(order, data=request.data)
     #     if serializer.is_valid():
     #         serializer.save()
     #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     else:
-    #         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PaymentCardAPIView(generics.CreateAPIView):
     """
     Оплата (карта оплаты)
     """
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = PaymentCardSerializer
 
     def create(self, request, *args, **kwargs):

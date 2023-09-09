@@ -176,7 +176,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = [
         'id',
         'createdAt',
-        'profile',
+        # 'profile',
         'status',
         'deliveryType',
         'paymentType',
@@ -187,7 +187,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_display_links = [
         'id',
         'createdAt',
-        'profile',
+        # 'profile',
         'status',
         'deliveryType',
         'paymentType',
