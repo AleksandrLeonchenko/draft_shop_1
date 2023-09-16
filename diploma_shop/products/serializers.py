@@ -1,11 +1,11 @@
 from django.db.models import Count
 from django.utils import formats
-from rest_framework import serializers, request
+from rest_framework import serializers, request, exceptions
+from django.shortcuts import get_object_or_404
 from rest_framework.serializers import raise_errors_on_nested_writes
 from rest_framework.utils import model_meta
 from django.contrib.auth import authenticate
 from datetime import datetime
-
 # from rest_framework_recursive.fields import RecursiveField
 # from django.contrib.auth.models import Group
 
@@ -13,7 +13,7 @@ from .models import *
 
 
 class FilterReviewListSerializer(serializers.ListSerializer):
-    """Фильтр комментариев комментариев, (parents)"""
+    """Фильтр комментариев комментариев, (parents), можно удалить"""
 
     def to_representation(self, data):
         data = data.filter(parent=None)
@@ -21,7 +21,7 @@ class FilterReviewListSerializer(serializers.ListSerializer):
 
 
 class RecursiveSerializer(serializers.Serializer):
-    """Для рекурсивного вывода children, если понадобится"""
+    """Для рекурсивного вывода категорий, если понадобится"""
 
     def to_representation(self, value):
         serializer = self.parent.parent.__class__(value, context=self.context)
@@ -67,15 +67,13 @@ class ReviewSerializer(serializers.ModelSerializer):
     Вывод отзыва
     """
     author = serializers.SlugRelatedField(slug_field='username', read_only=True)
-    # email = UserSerializer(many=True)
-    # email = serializers.EmailField(source='email')
+    date = serializers.DateTimeField(format='%Y-%m-%d %H:%M', read_only=True)
     email = serializers.SerializerMethodField()
 
     def get_email(self, obj):
         return obj.author.email
 
     class Meta:
-        # list_serializer_class = FilterReviewListSerializer
         model = Review
         fields = (
             'author',
@@ -83,7 +81,6 @@ class ReviewSerializer(serializers.ModelSerializer):
             'date',
             'text',
             'rate',
-            # 'children_review',
         )
 
 
@@ -128,15 +125,6 @@ class ProfileImageSerializer(serializers.ModelSerializer):
             'alt',
         )
 
-    # def create(self, validated_data):
-    #     return AvatarsImages.objects.create(**validated_data)
-    #
-    # def update(self, instance, validated_data):
-    #     instance.src = validated_data.get("src", instance.src)
-    #     instance.alt = validated_data.get("alt", instance.alt)
-    #     instance.save()
-    #     return instance
-
 
 class TagSerializer(serializers.ModelSerializer):
     """
@@ -145,7 +133,6 @@ class TagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tag
-        # fields = "__all__"
         fields = (
             # 'id',
             'name',
@@ -179,25 +166,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     reviews = serializers.IntegerField(source='reviews_count')
     rating = serializers.FloatField()
-    # date = serializers.DateTimeField(format=formats.get_format('DATETIME_FORMAT'))
     date = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)')
-
-    # class Meta:
-    #     model = ProductInstance
-    #     fields = (
-    #         'id',
-    #         'category',
-    #         'price',
-    #         'count',
-    #         'date',
-    #         'title',
-    #         'description',
-    #         'freeDelivery',
-    #         'images',
-    #         'tags',
-    #         'reviews',
-    #         'rating',
-    #     )
 
     class Meta:
         model = ProductInstance
@@ -229,24 +198,23 @@ class ProductSalesSerializer(serializers.ModelSerializer):
     dateFrom = serializers.SerializerMethodField()
     dateTo = serializers.SerializerMethodField()
 
+    def get_dateFrom(self, obj):
+        return obj.dateFrom.strftime("%m-%d")
+
+    def get_dateTo(self, obj):
+        return obj.dateTo.strftime("%m-%d")
+
     class Meta:
         model = ProductInstance
         fields = (
             'id',
             'price',
             'salePrice',
-            # 'count',
             'dateFrom',
             'dateTo',
             'title',
             'images',
         )
-
-    def get_dateFrom(self, obj):
-        return obj.dateFrom.strftime("%m-%d")
-
-    def get_dateTo(self, obj):
-        return obj.dateTo.strftime("%m-%d")
 
 
 class PropertyTypeProductSerializer(serializers.ModelSerializer):
@@ -317,8 +285,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         source='user.email',
         allow_null=True,
         allow_blank=True
-    )  # email не обновляется, но фронтом отображается
-    # email = serializers.EmailField(allow_null=True, allow_blank=True) #email обновляется, но фронтом не отображается
+    )
     avatar = ProfileImageSerializer(required=False)
 
     class Meta:
@@ -448,50 +415,16 @@ class ProfileAvatarSerializer(serializers.ModelSerializer):
         return instance
 
 
-# class BasketItemSerializer(serializers.ModelSerializer):
-#     # product = ProductListSerializer()
-#     # product = serializers.IntegerField(read_only=True)  # Для POST-запроса по id, не работает
-#     product = serializers.IntegerField()  # Для POST-запроса по product, работает, но не на фронте
-#     # id = serializers.IntegerField(source='product.id')  # Поле id указывает на атрибут id продукта, не работает
-#     count = serializers.IntegerField()
-#
-#     class Meta:
-#         model = BasketItem
-#         fields = (
-#             # 'id',
-#             'product',
-#             'count',
-#         )
-
-
-# class BasketItemSerializer(serializers.ModelSerializer):
-#     """
-#     Продукт и его количество из корзины
-#     """
-#     product = serializers.PrimaryKeyRelatedField(queryset=ProductInstance.objects.all())
-#     count = serializers.IntegerField()
-#
-#     class Meta:
-#         model = BasketItem
-#         fields = (
-#             'id',
-#             'product',
-#             'count',
-#         )
-
 class BasketItemSerializer(serializers.ModelSerializer):
-    # product = serializers.PrimaryKeyRelatedField(queryset=ProductInstance.objects.all())
     count = serializers.IntegerField()
     id = serializers.IntegerField()
 
     class Meta:
         model = BasketItem
-        fields = ('id', 'count')
-        # fields = (
-        #     'id',
-        #     'product',
-        #     'count',
-        # )
+        fields = (
+            'id',
+            'count'
+        )
 
 
 # class BasketProductSerializer(serializers.ModelSerializer):
@@ -598,144 +531,70 @@ class DeleteBasketItemSerializer(serializers.Serializer):
     count = serializers.IntegerField()
 
 
-class OrderBasketProductSerializer(serializers.ModelSerializer):
-    """
-    Данные продукта из заказа
-    """
-    tags = TagSerializer(many=True, read_only=True)
-    images = ProductImageSerializer(many=True, read_only=True)
-    reviews = serializers.IntegerField(source='reviews_count', read_only=True)
-    rating = serializers.FloatField()
-    date = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)')
-    count = serializers.IntegerField()
-    items = BasketItemSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = ProductInstance
-        fields = (
-            'id',
-            'category',
-            'price',
-            'count',
-            'date',
-            'title',
-            'description',
-            'freeDelivery',
-            'images',
-            'tags',
-            'reviews',
-            'rating',
-            'items',
-        )
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-
-        # Добавляем поле reviews в representation
-        reviews = ProductInstance.objects.filter(available=True, id=instance.id).annotate(
-            reviews_count=Count('reviews')).values('reviews_count').first()
-        if reviews:
-            representation['reviews'] = reviews['reviews_count']
-        else:
-            representation['reviews'] = 0
-        # Добавляем поле count в representation
-        basket_items = BasketItem.objects.filter(product=instance)
-        first_item = basket_items.first()
-        if first_item:
-            count = first_item.count
-            representation['count'] = count
-        return representation
-
-
-class OrderBasketItemSerializer(serializers.ModelSerializer):
-    """
-    Продукт и его количество из заказа
-    """
-    product = serializers.SerializerMethodField()
-
-    def get_product(self, obj):
-        return OrderBasketProductSerializer(obj.product).data
-
-    class Meta:
-        model = BasketItem
-        # fields = '__all__'
-        fields = ('product',)
-
-
-class OrderBasketSerializer(serializers.ModelSerializer):
-    """
-    Чья корзина из заказа
-    """
-    items = serializers.SerializerMethodField()
-
-    def get_items(self, obj):
-        products = obj.products.all()
-        product_data = []
-        for product in products:
-            product_serialized = OrderBasketProductSerializer(product).data
-            product_data.append(product_serialized)
-        return product_data
-
-    class Meta:
-        model = Basket
-        fields = (
-            'items',
-        )
-
-
-class OrderSerializer1(serializers.ModelSerializer):  # наверно нужно будет убрать поле profile из модели (есть user)
+class OrderSerializer(serializers.ModelSerializer):
     """
     Заказ
     """
-    fullName = serializers.CharField(source='profile.fullName')
-    email = serializers.EmailField(source='profile.user.email')
-    phone = serializers.CharField(source='profile.phone')
-
-    # fullName = serializers.CharField(source='basket.user.profile.fullName')
-    # email = serializers.EmailField(source='basket.user.email')
-    # phone = serializers.CharField(source='basket.user..phone')
-
-    createdAt = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)', required=False)
+    fullName = serializers.CharField(source='basket.user.profile.fullName', read_only=True)
+    email = serializers.EmailField(source='basket.user.email', read_only=True)
+    phone = serializers.CharField(source='basket.user.profile.phone', read_only=True)
     products = serializers.SerializerMethodField()
     totalCost = serializers.SerializerMethodField()
+    # createdAt = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)', read_only=True)
+    createdAt = serializers.DateTimeField(format='%Y-%m-%d %H:%M', read_only=True)
+    deliveryType = serializers.SerializerMethodField()
+    paymentType = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
 
-    deliveryType = serializers.CharField(source='get_deliveryType_display')
-    paymentType = serializers.CharField(source='get_paymentType_display')
-    status = serializers.CharField(source='get_status_display')
+    def get_deliveryType(self, obj):
+        delivery_type = obj.get_deliveryType_display()  # Получаем отображаемое значение поля "deliveryType"
+        return delivery_type
 
-    def get_products(self, obj):
-        products = obj.basket.products.all()  # Обращаюсь к атрибуту "products" через связь с объектом "Basket"
-        product_data = []
-        for product in products:
-            product_serialized = OrderBasketProductSerializer(product).data
-            product_data.append(product_serialized)
-        return product_data
+    def get_paymentType(self, obj):
+        payment_type = obj.get_paymentType_display()
+        return payment_type
+
+    def get_status(self, obj):
+        status = obj.get_status_display()
+        return status
 
     def get_totalCost(self, obj):
         return obj.calculate_total_cost()
 
-    # def create(self, validated_data):
-    #     basket_data = validated_data.pop('basket')
-    #     order = Order.objects.create(**validated_data)
-    #     basket = Basket.objects.create(order=order, **basket_data)
-    #     basket.calculate_total_cost()  # Рассчитываем и сохраняем суммарную стоимость продуктов в корзине
-    #     return order
+    def get_products(self, obj):
+        products = obj.basket.products.all()  # Получаем все продукты в этом заказе
+        product_ids = [product.id for product in products]  # Получаем их ID
+        annotated_products = ProductInstance.objects.filter_and_annotate(product_ids)  # Аннотируем их
+        annotated_products_dict = {product.id: product.reviews_count for product in
+                                   annotated_products}  # Словарь для быстрого доступа
+
+        product_data = []
+        for product in products:
+            product_serialized = BasketProductSerializer(product).data  # Сериализуем каждый продукт
+            product_serialized["reviews"] = annotated_products_dict.get(product.id,
+                                                                        0)  # Добавляем аннотированное поле с ключом "reviews"
+            product_data.append(product_serialized)
+
+        return product_data
 
     def create(self, validated_data):
-        # product_data = validated_data.get('products')[0]
-        if 'products' in validated_data and validated_data['products']:
-            product_data = validated_data['products'][0]
-        else:
-            # Обработка ошибки или возврат значения по умолчанию
-            product_data = None  # Здесь можно задать значение по умолчанию, например None или пустой словарь {}
-        product = ProductInstance.objects.create(**product_data)
-        validated_data.pop('products')
-        order = Order.objects.create(**validated_data)
-        basket = Basket.objects.create(user=order.profile.user)
-        BasketItem.objects.create(basket=basket, product=product, count=product_data['count'])
-        order.totalCost = basket.calculate_total_cost()
-        order.basket = basket
+        user = self.context['request'].user
+        basket = user.basket
+        # Валидация данных из корзины (есть ли продукты в корзине).
+        if not basket.items.exists():
+            raise exceptions.ValidationError("Корзина пуста")
+        # if not basket or basket.items.count() == 0:
+        #     raise serializers.ValidationError("Корзина пуста.")
+        #
+        order = Order.objects.create(basket=basket, **validated_data)
+
+        order.fullName = basket.user.profile.fullName
+        order.email = user.email
+        order.phone = basket.user.profile.phone
+
+        order.total_cost = order.calculate_total_cost()
         order.save()
+
         return order
 
     class Meta:
@@ -753,86 +612,49 @@ class OrderSerializer1(serializers.ModelSerializer):  # наверно нужн�
             'city',
             'address',
             'products',
-            'basket'
         )
 
 
-class OrderSerializer2(serializers.ModelSerializer):
-    products = BasketProductSerializer(many=True)
-
-    class Meta:
-        model = Order
-        fields = '__all__'
-
-    def create(self, validated_data):
-        product_data_list = validated_data.pop('products', [])
-        order = Order.objects.create(**validated_data)
-        basket = Basket.objects.create(user=order.profile.user)
-
-        for product_data in product_data_list:
-            product = ProductInstance.objects.create(**product_data)
-            BasketItem.objects.create(basket=basket, product=product, count=product_data.get('count', 1))
-
-        order.totalCost = basket.calculate_total_cost()
-        order.basket = basket
-        order.save()
-
-        return order
-
-
-class OrderSerializer(serializers.ModelSerializer):
-    """
-    Заказ
-    """
+class OrderDetailSerializer(serializers.ModelSerializer):
     fullName = serializers.CharField(source='basket.user.profile.fullName', read_only=True)
     email = serializers.EmailField(source='basket.user.email', read_only=True)
     phone = serializers.CharField(source='basket.user.profile.phone', read_only=True)
-    products = BasketProductSerializer(many=True, source='basket.products', read_only=True)
+    products = serializers.SerializerMethodField()
     totalCost = serializers.SerializerMethodField()
     createdAt = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)', read_only=True)
     deliveryType = serializers.SerializerMethodField()
     paymentType = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
+
     def get_deliveryType(self, obj):
         delivery_type = obj.get_deliveryType_display()  # Получаем отображаемое значение поля "deliveryType"
         return delivery_type
+
     def get_paymentType(self, obj):
         payment_type = obj.get_paymentType_display()
         return payment_type
+
     def get_status(self, obj):
         status = obj.get_status_display()
         return status
+
     def get_products(self, obj):
-        products = obj.basket.products.all()  # Обращаюсь к атрибуту "products" через связь с объектом "Basket"
+        products = obj.basket.products.all()  # Получаем все продукты в этом заказе
+        product_ids = [product.id for product in products]  # Получаем их ID
+        annotated_products = ProductInstance.objects.filter_and_annotate(product_ids)  # Аннотируем их
+        annotated_products_dict = {product.id: product.reviews_count for product in
+                                   annotated_products}  # Словарь для быстрого доступа
+
         product_data = []
         for product in products:
-            product_serialized = OrderBasketProductSerializer(product).data
+            product_serialized = BasketProductSerializer(product).data  # Сериализуем каждый продукт
+            product_serialized["reviews"] = annotated_products_dict.get(product.id, 0)  # Добавляем аннотированное поле с ключом "reviews"
             product_data.append(product_serialized)
+
         return product_data
 
     def get_totalCost(self, obj):
         return obj.calculate_total_cost()
-
-    def create(self, validated_data):
-        user = self.context['request'].user
-        basket = user.basket
-        order = Order.objects.create(basket=basket, **validated_data)
-
-        order.fullName = basket.user.profile.fullName
-        order.email = user.email
-        order.phone = basket.user.profile.phone
-
-        products = []
-        basket_items = BasketItem.objects.filter(basket=basket)
-        for basket_item in basket_items:
-            product_data = BasketProductSerializer(basket_item.product).data
-            product_data['count'] = basket_item.count
-            products.append(product_data)
-
-        order.total_cost = order.calculate_total_cost()
-        order.save()
-
-        return order
 
     class Meta:
         model = Order
@@ -860,4 +682,3 @@ class PaymentCardSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentCard
         exclude = ['id', 'owner']
-        # fields = '__all__'

@@ -9,13 +9,18 @@ from django.db import models
 from django.contrib.auth.context_processors import auth
 from django.contrib.auth.models import User
 from PIL import Image
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Count
 from django.utils import timezone
 from django.urls import reverse
 from phonenumber_field.modelfields import PhoneNumberField
 from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
+
+
+class ProductInstanceManager(models.Manager):
+    def filter_and_annotate(self, product_ids):
+        return self.filter(id__in=product_ids, available=True).annotate(reviews_count=Count('reviews'))
 
 
 class Category(models.Model):
@@ -54,13 +59,14 @@ class ProductInstance(models.Model):
     """
     Модель конкретного продукта для магазина
     """
+    objects = ProductInstanceManager()
+
     title = models.CharField(max_length=200, db_index=True, verbose_name='Название продукта')
     slug = models.SlugField(max_length=200, unique=True, db_index=True, verbose_name='URL продукта')
     item_number = models.IntegerField(default=True, verbose_name='Артикул продукта')
     description = models.TextField(blank=True, max_length=500, verbose_name='Краткое описание продукта')
     fullDescription = models.TextField(blank=True, verbose_name='Полное описание продукта')
     freeDelivery = models.BooleanField(default=False, verbose_name='free delivery')
-
     sort_index = models.PositiveIntegerField(default=True, verbose_name='Индекс сортировки')
     number_of_purchases = models.PositiveIntegerField(default=True, verbose_name='Количество покупок')
     limited_edition = models.BooleanField(default=False, null=True, verbose_name='Ограниченный тираж')
@@ -83,13 +89,10 @@ class ProductInstance(models.Model):
 
     count = models.PositiveIntegerField(null=True, blank=True, verbose_name='Количество продукта на складе')
     available = models.BooleanField(default=True, null=True, verbose_name='Доступность продукта в каталоге')
-
     date = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания продукта')
     updated_date = models.DateTimeField(auto_now=True, verbose_name='Дата изменения продукта')
-
     dateFrom = models.DateTimeField(default=timezone.now, verbose_name='Дата начала распродажи продукта')
     dateTo = models.DateTimeField(default=timezone.now, verbose_name='Дата окончания распродажи продукта')
-
     archived = models.BooleanField(default=True, verbose_name='Продукт архивирован')
     tags = models.ManyToManyField(
         'Tag',
@@ -103,7 +106,6 @@ class ProductInstance(models.Model):
         related_name="product_category",
         verbose_name="Категория продукта",
     )
-
     rating = models.DecimalField(
         null=True,
         blank=True,
@@ -594,13 +596,6 @@ class Order(models.Model):  # нужно будет убрать поле profil
     )
     city = models.CharField(max_length=100, default='yyy')
     address = models.CharField(max_length=100, default='xxx')
-    # profile = models.ForeignKey(
-    #     'Profile',
-    #     on_delete=models.CASCADE,
-    #     default=1,
-    #     related_name='profile_order',
-    #     verbose_name='Покупатель'
-    # )
     basket = models.OneToOneField(
         'Basket',
         on_delete=models.CASCADE,

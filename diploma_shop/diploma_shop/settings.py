@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'autoslug',
     'crispy_forms',
+    'drf_spectacular',
 
     # 'frontend',
     'frontend.apps.FrontendConfig',
@@ -193,7 +194,14 @@ REST_FRAMEWORK = {
     # 'DEFAULT_RENDERER_CLASSES': [
     #     'rest_framework.renderers.BrowsableAPIRenderer',
     # ],
-    # "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Megano Project API",
+    "DESCRIPTION": "My site with shop app and custom auth",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 CKEDITOR_UPLOAD_PATH = "uploads/"

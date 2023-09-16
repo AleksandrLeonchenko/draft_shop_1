@@ -1,5 +1,4 @@
 import json
-
 import django_filters
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ObjectDoesNotExist
@@ -9,18 +8,23 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status, generics, filters
 from django.contrib.auth.models import Group
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.decorators import parser_classes
 from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.generics import GenericAPIView, ListCreateAPIView, ListAPIView, CreateAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import GenericAPIView, ListCreateAPIView, ListAPIView, CreateAPIView, \
+    RetrieveUpdateAPIView, RetrieveAPIView
 from rest_framework.mixins import ListModelMixin
 from rest_framework import viewsets
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.parsers import JSONParser
+from django_filters import rest_framework as filters
+from django_filters import FilterSet, CharFilter, NumberFilter, BooleanFilter, ChoiceFilter
 
 from .forms import BasketDeleteForm
 from .serializers import *
@@ -28,9 +32,27 @@ from .models import *
 from .service import *
 
 
+class ProductFilter(FilterSet):
+    """
+    Класс для фильтрации с параметрами фильтрации
+    """
+    name = CharFilter(field_name='title', lookup_expr='icontains')
+    # filter = CharFilter(field_name='title', lookup_expr='icontains')
+    minPrice = NumberFilter(field_name='price', lookup_expr='gte')
+    maxPrice = NumberFilter(field_name='price', lookup_expr='lte')
+    freeDelivery = BooleanFilter(field_name='freeDelivery')
+    available = BooleanFilter(field_name='available')
+    category = NumberFilter(field_name='category__id')
+    property = CharFilter(field_name='specifications__value', lookup_expr='icontains')
+
+    class Meta:
+        model = ProductInstance
+        fields = []
+
+
 class ProductListView(ListAPIView):
     """
-    Вывод списка продуктов
+    Вывод списка продуктов, можно удалить
     """
     queryset = ProductInstance.objects.filter(available=True)
     serializer_class = ProductListSerializer
@@ -43,62 +65,19 @@ class ProductListView(ListAPIView):
 
 class CatalogView(ListAPIView):
     """
-    Вывод каталога с сортировкой, окно с сортировкой не выводится в рест, с "?" в строке работает,
-    но на фронте не работает.
-    Сортировка по количеству покупок по возрастанию: ?sort_by=number_of_purchases&sort_direction=asc.
-    Сортировка по цене по убыванию: ?sort_by=price&sort_direction=desc.
-    Сортировка по количеству отзывов по возрастанию: ?sort_by=reviews&sort_direction=asc.
-    Сортировка по новизне по убыванию: ?sort_by=date&sort_direction=desc.
-    Сортировка по количеству покупок по возрастанию и фильтрацией по цене: ?ordering=number_of_purchases&price=500
-    Сортировка с фильтрацией по названию и тегам: ?title=video&tags=1,2,3
-
-    Поиск по по вхождению слова "школьник", по цене от 0 до 1000, freeDelyvery=True и available=True:
-    http://127.0.0.1:8000/api/catalog/?filter=школьник&minPrice=0&maxPrice=1000&freeDelyvery=True&available=True
-
-    Сортировка на фронте работает, но некорректно - либо по возрастанию либо по убыванию
+    /catalog/?name=школ - поиск по названию продукта регистронезависимым вхождением "школ" в название продукта
+    /catalog/?minPrice=100&maxPrice=1000&freeDelivery=true отфильтрованы продукты с ценой от 100 до 1000 с бесплатной доставкой
+    /catalog/?name=школ&minPrice=100&maxPrice=1000&freeDelivery=true
+    /catalog/?ordering=-rating (Сортировка по рейтингу в убывающем порядке)
+    /catalog/?ordering=price (Сортировка по цене в возрастающем порядке)
     """
-
     queryset = ProductInstance.objects.filter(available=True).annotate(reviews_count=Count('reviews'))
     serializer_class = ProductListSerializer
     pagination_class = CustomPaginationProducts
-    filter_backends = [OrderingFilter, DjangoFilterBackend, filters.SearchFilter]  # Добавлен фильтр поиска
-    # filterset_class = ProductFilter
-
-    ordering_fields = ['rating', 'price', 'reviews_count', 'date']  # Поля для сортировки
-    filterset_fields = ['title', 'price', 'available', 'freeDelivery', 'tags']  # Поля для фильтрации
-    search_fields = ['title', 'description']  # Поля для поиска
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-
-        # Получаем параметры поиска из GET-запроса
-        search_text = self.request.GET.get('filter')
-        min_price = self.request.GET.get('minPrice')
-        max_price = self.request.GET.get('maxPrice')
-        free_delivery = self.request.GET.get('freeDelyvery')
-        available = self.request.GET.get('available')
-        ordering = self.request.GET.get('sort')
-
-        # Параметры поиска
-        if search_text:
-            # queryset = queryset.filter(
-            #     Q(title__icontains=search_text) | Q(description__icontains=search_text)
-            # )
-            queryset = queryset.filter(Q(title__icontains=search_text))
-        if min_price:
-            queryset = queryset.filter(price__gte=min_price)
-        if max_price:
-            queryset = queryset.filter(price__lte=max_price)
-        if free_delivery:
-            queryset = queryset.filter(freeDelivery=free_delivery)
-        if available:
-            queryset = queryset.filter(available=available)
-
-        # Сортировка результатов
-        if ordering in self.ordering_fields:
-            queryset = queryset.order_by(ordering)
-
-        return queryset
+    filter_backends = (filters.DjangoFilterBackend, OrderingFilter,)
+    filterset_class = ProductFilter
+    ordering_fields = ['rating', 'price', 'reviews_count', 'date']
+    ordering = ['date']  # default ordering
 
 
 class ProductPopularView(APIView):
@@ -158,11 +137,18 @@ class ProductDetailView(APIView):
     def get(self, request, pk):
         product = ProductInstance.objects.get(id=pk, available=True)
         average_rating = Review.objects.filter(product=product).aggregate(Avg('rate__value'))
-        # email = Review.objects.filter(product=product)
-        product.rating = average_rating['rate__value__avg']
-        product.save()
-        serializer = ProductDetailSerializer(product)
 
+        # Округляем средний рейтинг до одного десятичного знака
+        if average_rating['rate__value__avg'] is not None:
+            formatted_rating = round(average_rating['rate__value__avg'], 1)
+        else:
+            formatted_rating = None
+
+        # Сохраняем округленное значение в модель
+        product.rating = formatted_rating
+        product.save()
+
+        serializer = ProductDetailSerializer(product)
         return Response(serializer.data)
 
 
@@ -249,28 +235,6 @@ class ProfileView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-# class SignInView(APIView):
-#     """
-#     Вход
-#     """
-#     authentication_classes = [SessionAuthentication]
-#     serializer_class = LoginSerializer
-#
-#     def post(self, request):
-#         serializer = self.serializer_class(data=request.data)
-#         if serializer.is_valid():
-#             username = serializer.validated_data.get('username')
-#             password = serializer.validated_data.get('password')
-#
-#             user = authenticate(request, username=username, password=password)
-#
-#             if user is not None:
-#                 login(request, user)
-#                 return Response({'message': 'Вы успешно вошли в систему!'})
-#
-#         return Response({'error': 'Неверные учетные данные'})
-
-
 class LoginView(APIView):
     """
     Вход в систему
@@ -314,16 +278,6 @@ class SignUpView(APIView):
             return Response({'message': 'Пользователь успешно зарегистрирован'})
 
         return Response(serializer.errors)
-
-
-# class SignOutView(APIView):
-#     """
-#     Выход
-#     """
-#
-#     def post(self, request: Request) -> Response:
-#         logout(request)
-#         return Response(status=status.HTTP_200_OK)
 
 
 class LogoutView(APIView):
@@ -391,8 +345,10 @@ class BasketView(APIView):
         basket = get_object_or_404(Basket, user=request.user)
         basket_items = basket.items.all()
         product_ids = basket_items.values_list('product_id', flat=True)
-        products = ProductInstance.objects.filter(id__in=product_ids, available=True).annotate(
-            reviews_count=Count('reviews'))
+
+        # Используем новый метод менеджера
+        products = ProductInstance.objects.filter_and_annotate(product_ids)
+
         serializer = BasketProductSerializer(products, many=True)
         return Response(serializer.data)
 
@@ -409,35 +365,28 @@ class BasketView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request):
-        basket = Basket.objects.get(user=request.user)
-        serializer = DeleteBasketItemSerializer(data=request.data)
+        serializer = BasketItemSerializer(data=request.data)
         if serializer.is_valid():
-            item_id = serializer.validated_data['id']
-            item_count = serializer.validated_data['count']
-            basket_item = BasketItem.objects.get(id=item_id, basket=basket)
-            basket_item.count -= item_count
-            if basket_item.count <= 0:
+            basket = Basket.objects.get(user=request.user)
+            product_id = serializer.validated_data['id']
+            count = serializer.validated_data['count']
+
+            try:
+                basket_item = BasketItem.objects.get(basket=basket, product_id=product_id)
+            except BasketItem.DoesNotExist:
+                return Response({"error": "Product not found in basket"}, status=status.HTTP_404_NOT_FOUND)
+
+            if basket_item.count == count:
                 basket_item.delete()
-            else:
+            elif basket_item.count > count:
+                basket_item.count -= count
                 basket_item.save()
-            products = ProductInstance.objects.filter(id=basket_item.product_id, available=True).annotate(
-                reviews_count=Count('reviews'))
-            serializer = BasketProductSerializer(products, many=True)
-            return Response(serializer.data)
+            else:
+                return Response({"error": "The basket contains fewer items than you're trying to remove"},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({"message": "Item(s) removed successfully"}, status=status.HTTP_204_NO_CONTENT)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class BasketViewSet(viewsets.ModelViewSet):
-#     queryset = Basket.objects.all()
-#     serializer_class = BasketSerializer
-#
-#     # form_class = BasketDeleteForm
-#
-#     def destroy(self, request, *args, **kwargs):
-#         instance = self.get_object()
-#         serializer = self.get_serializer(instance)
-#         self.perform_destroy(instance)
-#         return Response(serializer.data)
 
 
 class OrderAPIView(ListCreateAPIView):
@@ -448,22 +397,20 @@ class OrderAPIView(ListCreateAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response({"orderId": serializer.instance.id}, status=status.HTTP_201_CREATED, headers=headers)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class OrderDetailAPIView(generics.RetrieveAPIView):
-    """
-    Экземпляр заказа
-    """
+
+class OrderDetailAPIView(RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
     queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-
-    # def post(self, request, *args, **kwargs):
-    #     order = self.get_object()
-    #     serializer = self.serializer_class(order, data=request.data)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer_class = OrderDetailSerializer
 
 
 class PaymentCardAPIView(generics.CreateAPIView):
@@ -483,5 +430,5 @@ class PaymentCardAPIView(generics.CreateAPIView):
             return Response({'error': 'Invalid card number'}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer.save(owner=request.user)
-        # return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK)
+        # return Response(serializer.data, status=status.HTTP_200_OK)
