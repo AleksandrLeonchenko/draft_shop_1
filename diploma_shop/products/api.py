@@ -1,6 +1,6 @@
 import json
 import django_filters
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models import Avg, Case, When, Sum, Count, Prefetch, Q
@@ -86,6 +86,7 @@ class ProductPopularView(APIView):
     """
 
     def get(self, request):
+        print('-------+++++------------------', request.user)
         products = ProductInstance.objects.filter(available=True).order_by('-sort_index', '-number_of_purchases')[
                    :8].annotate(reviews_count=Count('reviews'))
         serializer = ProductListSerializer(products, many=True)
@@ -210,12 +211,14 @@ class ProfileView(APIView):
     email обновляется, но фронтом не отображается
     и аватар нужно обязятельно при обновлении загружать
     """
-    serializer_class = ProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ProfileSerializer
 
     def get(self, request):
         try:
             profile = Profile.objects.get(user=request.user)
+            print('-------00000------------------', request.user)# отладочная информация
+            print('-------00000------------------', request.session.session_key)# отладочная информация
         except ObjectDoesNotExist:
             profile = Profile.objects.create(user=request.user)
         serializer = self.serializer_class(profile)
@@ -235,30 +238,77 @@ class ProfileView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# class LoginView(APIView):
+#     authentication_classes = [BasicAuthentication]
+#     permission_classes = [AllowAny]  # Разрешаем неаутентифицированным пользователям делать запрос
+#
+#     def post(self, request):
+#         user = request.user
+#         if user.is_authenticated:
+#             login(request, user)
+#             return Response({"message": "successful operation"}, status=status.HTTP_200_OK)
+#         else:
+#             return Response({"error": "unsuccessful operation"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# class LoginView(APIView):
+#     authentication_classes = [BasicAuthentication]
+#     permission_classes = [AllowAny]  # Разрешаем неаутентифицированным пользователям делать запрос
+#
+#     def post(self, request):
+#         serializer = LoginSerializer(data=request.data)
+#         if serializer.is_valid():
+#             username = serializer.validated_data.get('username')
+#             password = serializer.validated_data.get('password')
+#             # Аутентификация пользователя
+#             user = authenticate(username=username, password=password)
+#             if user is not None:
+#                 if user.is_active:
+#                     login(request, user)
+#                     print('------------------------------', user)# отладочная информация
+#                     print('-------+++++------------------', request.user)# отладочная информация
+#                     print('-------+++++------------------', request.session.session_key)# отладочная информация
+#                     # В зависимости от вашей системы, вы можете тут вернуть токен или другую информацию
+#                     return Response({"message": "successful operation"}, status=status.HTTP_200_OK)
+#                 else:
+#                     return Response({"error": "This account has been disabled."}, status=status.HTTP_401_UNAUTHORIZED)
+#             else:
+#                 return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+#         else:
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class LoginView(APIView):
-    """
-    Вход в систему
-    """
-    authentication_classes = [SessionAuthentication]
-    permission_classes = [AllowAny]
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [AllowAny]  # Разрешаем неаутентифицированным пользователям делать запрос
 
     def post(self, request):
-        username = request.data.get('username')
-        password = request.data.get('password')
-
-        user = authenticate(request, username=username, password=password)
-
-        if user is not None:
-            login(request, user)
-            return Response({'message': 'Вы успешно вошли в систему!'})
-
-        return Response({'error': 'Неверные учетные данные'}, status=400)
+        serializer = LoginSerializer(data=request.data)
+        print('-------sssss-------------', request.user)# отладочная информация
+        if serializer.is_valid():
+            username = serializer.validated_data.get('username')
+            password = serializer.validated_data.get('password')
+            # Аутентификация пользователя
+            # user = authenticate(username=username, password=password)
+            user = authenticate(username=username, password=password)
+            print('--------fffffff---------', username, password)# отладочная информация
+            if user.is_authenticated:
+                # if user.is_active:
+                login(request, user)  # Вход пользователя в систему
+                print('------------------------------', user)# отладочная информация
+                print('-------+++++------------------', request.user)# отладочная информация
+                print('-------+++++------------------', request.session.session_key)# отладочная информация
+                return Response({"message": "successful operation"}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "unsuccessful operation"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SignUpView(APIView):
     """
     Регистрация, работает в рест, не работает во фронте, возможно 'name' это не 'fullName'
     """
+    User = get_user_model()
 
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
@@ -271,24 +321,28 @@ class SignUpView(APIView):
                     'phone'
                 ]
             }
-
             # Создаем пользователя без полей slug, avatar и phone
             user = User.objects.create_user(username=validated_data['username'], password=validated_data['password'])
             Profile.objects.create(user=user, fullName=validated_data['fullName'])
-            return Response({'message': 'Пользователь успешно зарегистрирован'})
+            login(request, user)
+            return Response({"message": "successful operation"}, status=status.HTTP_200_OK)
 
-        return Response(serializer.errors)
+        # return Response(serializer.errors)
+        return Response({"error": "unsuccessful operation"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class LogoutView(APIView):
     """
     Выход из системы
     """
-    authentication_classes = [SessionAuthentication]
+    # authentication_classes = [SessionAuthentication]
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
 
     def post(self, request):
+        print('-------xxxxx------------------', request.user)# отладочная информация
         logout(request)
-        return Response({'message': 'Вы успешно вышли из системы!'})
+        print('-------xxxxx333------------------', request.user)# отладочная информация
+        return Response({"message": "successful operation"}, status=status.HTTP_200_OK)
 
 
 class ChangePasswordAPIView(APIView):
@@ -308,13 +362,9 @@ class ChangePasswordAPIView(APIView):
             user.set_password(new_password)
             user.save()
 
-            return Response({
-                'message': 'Пароль успешно изменен'
-            })
+            return Response({'message': 'successful operation'}, status=status.HTTP_200_OK)
         else:
-            return Response({
-                'message': 'Неверный текущий пароль'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': 'Неверный текущий пароль'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UpdateAvatarAPIView(APIView):
