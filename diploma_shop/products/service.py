@@ -1,6 +1,10 @@
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+import json
+from rest_framework import parsers
 # from django_filters import rest_framework as product_filters
+from rest_framework.parsers import JSONParser
+from rest_framework.exceptions import ParseError
 
 from .models import *
 
@@ -33,25 +37,31 @@ class PaginationProducts(PageNumberPagination):
         })
 
 
-# def get_client_ip(request):
-#     """
-#     Функция, которая определяет IP-адрес юзера
-#     """
-#     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-#     if x_forwarded_for:
-#         ip = x_forwarded_for.split(',')[0]
-#     else:
-#         ip = request.META.get('REMOTE_ADDR')
-#     return ip
+class PlainListJSONParser(JSONParser):
+    """
+    Анализирует входные данные, сериализованные в формате JSON, в список примитивов Python.
+    Это позволяет в POST-запросе отправлять данные в формате массива.
+    """
+
+    media_type = 'application/json'
+
+    def parse(self, stream, media_type=None, parser_context=None):
+        parser_context = parser_context or {}
+        encoding = parser_context.get('encoding', 'utf-8')
+
+        try:
+            data = stream.read().decode(encoding)
+            return json.loads(data)
+        except ValueError as exc:
+            raise ParseError('JSON parse error - %s' % str(exc))
 
 
-# class ProductFilter(product_filters.FilterSet):
-#     """
-#     Свой фильтр
-#     """
-#     min_price = product_filters.NumberFilter(field_name="price", lookup_expr='gte')
-#     max_price = product_filters.NumberFilter(field_name="price", lookup_expr='lte')
+# class PlainListJSONParser(parsers.BaseParser):
+#     media_type = 'application/json'
 #
-#     class Meta:
-#         model = ProductInstance
-#         fields = ['category', 'title', 'price', 'available', 'freeDelivery', 'tags']
+#     def parse(self, stream, media_type=None, parser_context=None):
+#         data = stream.read().decode('utf-8')
+#         if not data:
+#             return {}
+#         # Здесь мы предполагаем, что на вход подается список, и просто оборачиваем его в словарь
+#         return {'products': json.loads(data)}

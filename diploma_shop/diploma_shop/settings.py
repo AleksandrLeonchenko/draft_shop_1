@@ -55,10 +55,10 @@ INSTALLED_APPS = [
     'crispy_forms',
     'drf_spectacular',
 
-    # 'frontend',
     'frontend.apps.FrontendConfig',
     'products.apps.ProductsConfig',
-    # 'users.apps.UsersConfig',
+    'users.apps.UsersConfig',
+    'orders.apps.OrdersConfig'
 ]
 
 MIDDLEWARE = [
@@ -179,8 +179,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.BasicAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-        # 'rest_framework.authentication.TokenAu/thentication',
+        # 'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.TokenAuthentication',
         # 'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
@@ -322,3 +322,5 @@ SPECTACULAR_SETTINGS = {
 # }
 
 # APPEND_SLASH=False
+
+SESSION_SAVE_EVERY_REQUEST = True

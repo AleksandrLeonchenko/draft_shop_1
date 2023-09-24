@@ -605,9 +605,11 @@ class Order(models.Model):  # нужно будет убрать поле profil
     )
 
     def __str__(self):
-        return f'{self.basket.user.username}'
+        # return f'{self.basket.user.username}'
+        return self.address
 
     def calculate_total_cost(self):
+        # total_cost = 777
         total_cost = 0
         basket_items = self.basket.items.all()  # Получаем все элементы в корзине
         for basket_item in basket_items:

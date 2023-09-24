@@ -390,8 +390,8 @@ class LoginSerializer(serializers.Serializer):
     """
     Вход
     """
-    # username = serializers.CharField(max_length=50)
-    login = serializers.CharField(source='username', max_length=50)
+    username = serializers.CharField(max_length=50)
+    # login = serializers.CharField(source='username', max_length=50)
     password = serializers.CharField(max_length=50)
 
 
@@ -480,6 +480,7 @@ class BasketProductSerializer(serializers.ModelSerializer):
     reviews = serializers.IntegerField(source='reviews_count', read_only=True)
     rating = serializers.FloatField()
     date = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)')
+    # date = serializers.DateTimeField(format='YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z]')
     count = serializers.IntegerField(default=0)
 
     class Meta:
@@ -501,11 +502,13 @@ class BasketProductSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        basket_items = BasketItem.objects.filter(product=instance)
-        first_item = basket_items.first()
-        if first_item:
-            count = first_item.count
-            representation['count'] = count
+
+        user = self.context.get('user')
+        if user:
+            basket = Basket.objects.get(user=user)
+            basket_items = BasketItem.objects.filter(product=instance, basket=basket)
+            total_count = basket_items.aggregate(total_count=models.Sum('count'))['total_count'] or 0
+            representation['count'] = total_count
 
         return representation
 
@@ -565,38 +568,25 @@ class OrderSerializer(serializers.ModelSerializer):
     def get_products(self, obj):
         products = obj.basket.products.all()  # Получаем все продукты в этом заказе
         product_ids = [product.id for product in products]  # Получаем их ID
+        print('/////', product_ids)
         annotated_products = ProductInstance.objects.filter_and_annotate(product_ids)  # Аннотируем их
         annotated_products_dict = {product.id: product.reviews_count for product in
                                    annotated_products}  # Словарь для быстрого доступа
 
         product_data = []
+        # Создаем словарь, чтобы проверять, добавлен ли уже продукт в список
+        added_products = {}
         for product in products:
+            # Если продукт уже добавлен, пропускаем его
+            if product.id in added_products:
+                continue
             product_serialized = BasketProductSerializer(product).data  # Сериализуем каждый продукт
             product_serialized["reviews"] = annotated_products_dict.get(product.id,
                                                                         0)  # Добавляем аннотированное поле с ключом "reviews"
             product_data.append(product_serialized)
+            added_products[product.id] = True  # Отмечаем, что продукт добавлен
 
         return product_data
-
-    def create(self, validated_data):
-        user = self.context['request'].user
-        basket = user.basket
-        # Валидация данных из корзины (есть ли продукты в корзине).
-        if not basket.items.exists():
-            raise exceptions.ValidationError("Корзина пуста")
-        # if not basket or basket.items.count() == 0:
-        #     raise serializers.ValidationError("Корзина пуста.")
-        #
-        order = Order.objects.create(basket=basket, **validated_data)
-
-        order.fullName = basket.user.profile.fullName
-        order.email = user.email
-        order.phone = basket.user.profile.phone
-
-        order.total_cost = order.calculate_total_cost()
-        order.save()
-
-        return order
 
     class Meta:
         model = Order
@@ -642,15 +632,23 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     def get_products(self, obj):
         products = obj.basket.products.all()  # Получаем все продукты в этом заказе
         product_ids = [product.id for product in products]  # Получаем их ID
+        print('/////', product_ids)
         annotated_products = ProductInstance.objects.filter_and_annotate(product_ids)  # Аннотируем их
         annotated_products_dict = {product.id: product.reviews_count for product in
                                    annotated_products}  # Словарь для быстрого доступа
 
         product_data = []
+        # Создаем словарь, чтобы проверять, добавлен ли уже продукт в список
+        added_products = {}
         for product in products:
+            # Если продукт уже добавлен, пропускаем его
+            if product.id in added_products:
+                continue
             product_serialized = BasketProductSerializer(product).data  # Сериализуем каждый продукт
-            product_serialized["reviews"] = annotated_products_dict.get(product.id, 0)  # Добавляем аннотированное поле с ключом "reviews"
+            product_serialized["reviews"] = annotated_products_dict.get(product.id,
+                                                                        0)  # Добавляем аннотированное поле с ключом "reviews"
             product_data.append(product_serialized)
+            added_products[product.id] = True  # Отмечаем, что продукт добавлен
 
         return product_data
 
