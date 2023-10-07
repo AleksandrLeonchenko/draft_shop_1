@@ -165,7 +165,8 @@ class ProductListSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
     reviews = serializers.IntegerField(source='reviews_count')
-    rating = serializers.FloatField()
+    # rating = serializers.FloatField()
+    rating = serializers.FloatField(source='average_rating', read_only=True)
     date = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)')
 
     class Meta:
@@ -478,7 +479,8 @@ class BasketProductSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
     reviews = serializers.IntegerField(source='reviews_count', read_only=True)
-    rating = serializers.FloatField()
+    # rating = serializers.FloatField()
+    rating = serializers.FloatField(source='average_rating', read_only=True)
     date = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)')
     # date = serializers.DateTimeField(format='YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z]')
     count = serializers.IntegerField(default=0)

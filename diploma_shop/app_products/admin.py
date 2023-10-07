@@ -106,11 +106,6 @@ class CategoryImagesAdmin(admin.ModelAdmin):
     search_fields = ('alt',)
 
 
-class AvatarsImagesAdmin(admin.ModelAdmin):
-    list_display = ('id', 'alt', 'src')
-    list_display_links = ('id', 'alt', 'src')
-    search_fields = ('alt',)
-
 
 class ReviewAdmin(admin.ModelAdmin):
     list_display = (
@@ -134,22 +129,6 @@ class ReviewAdmin(admin.ModelAdmin):
     search_fields = ('author', 'product')
 
 
-class ProfileAdmin(admin.ModelAdmin):
-    list_display = [
-        'id',
-        'user',
-        'fullName',
-        'phone',
-    ]
-    list_display_links = [
-        'id',
-        'user',
-        'fullName',
-        'phone',
-    ]
-    search_fields = ['id', 'user']
-    ordering = ['id']
-    prepopulated_fields = {"slug": ("user",)}
 
 
 class TagAdmin(admin.ModelAdmin):
@@ -172,84 +151,7 @@ class RateAdmin(admin.ModelAdmin):
     ordering = ['id']
 
 
-class OrderAdmin(admin.ModelAdmin):
-    list_display = [
-        'id',
-        'createdAt',
-        # 'profile',
-        'status',
-        'deliveryType',
-        'paymentType',
-        'totalCost',
-        'city',
-        'address'
-    ]
-    list_display_links = [
-        'id',
-        'createdAt',
-        # 'profile',
-        'status',
-        'deliveryType',
-        'paymentType',
-        'totalCost',
-        'city',
-        'address'
-    ]
-    search_fields = ['id']
-    ordering = ['id']
 
-
-class BasketAdmin(admin.ModelAdmin):
-    list_display = [
-        'id',
-        'user',
-    ]
-    list_display_links = [
-        'id',
-        'user',
-    ]
-    search_fields = ['id']
-    ordering = ['id']
-
-
-class BasketItemAdmin(admin.ModelAdmin):
-    list_display = [
-        'id',
-        'basket',
-        'count',
-        'product'
-    ]
-    list_display_links = [
-        'id',
-        'basket',
-        'count',
-        'product'
-    ]
-    search_fields = ['id']
-    ordering = ['id']
-
-
-class PaymentCardAdmin(admin.ModelAdmin):
-    list_display = [
-        'id',
-        'owner',
-        'number',
-        'name',
-        'month',
-        'year',
-        'code'
-    ]
-    list_display_links = [
-        'id',
-        'owner',
-        'number',
-        'name',
-        'month',
-        'year',
-        'code'
-    ]
-    search_fields = ['id']
-    ordering = ['id']
 
 
 admin.site.register(Category, CategoryAdmin)
@@ -258,15 +160,10 @@ admin.site.register(PropertyTypeProduct, PropertyTypeProductAdmin)
 admin.site.register(PropertyInstanceProduct, PropertyInstanceProductAdmin)
 admin.site.register(ProductImages, ProductImagesAdmin)
 admin.site.register(CategoryImages, CategoryImagesAdmin)
-admin.site.register(AvatarsImages, AvatarsImagesAdmin)
 admin.site.register(Review, ReviewAdmin)
-admin.site.register(Profile, ProfileAdmin)
 admin.site.register(Tag, TagAdmin)
 admin.site.register(Rate, RateAdmin)
-admin.site.register(Order, OrderAdmin)
-admin.site.register(Basket, BasketAdmin)
-admin.site.register(BasketItem, BasketItemAdmin)
-admin.site.register(PaymentCard, PaymentCardAdmin)
 
-admin.site.site_title = 'Админ-панель приложения products'
-admin.site.site_header = 'Админ-панель приложения products'
+
+admin.site.site_title = 'Админ-панель приложения app_products'
+admin.site.site_header = 'Админ-панель приложения app_products'

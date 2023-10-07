@@ -76,7 +76,7 @@ class CatalogView(ListAPIView):
     /catalog/?ordering=price (Сортировка по цене в возрастающем порядке)
     """
     permission_classes = (AllowAny,)
-    queryset = ProductInstance.objects.filter(available=True).annotate(reviews_count=Count('reviews'))
+    # queryset = ProductInstance.objects.filter(available=True).annotate(reviews_count=Count('reviews'))
     serializer_class = ProductListSerializer
     pagination_class = CustomPaginationProducts
     filter_backends = (filters.DjangoFilterBackend, OrderingFilter,)
@@ -84,6 +84,9 @@ class CatalogView(ListAPIView):
     ordering_fields = ['rating', 'price', 'reviews_count', 'date']
     ordering = ['date']  # default ordering
 
+    def get_queryset(self):
+        # Примените ваш кастомный метод менеджера тут
+        return ProductInstance.objects.filter_and_annotate()
 
 class ProductPopularView(APIView):
     """
@@ -522,8 +525,8 @@ class OrderAPIView(APIView):
         return Response({"orderId": order.id}, status=status.HTTP_201_CREATED)
 
     # def get(self, request, *args, **kwargs):
-    #     orders = Order.objects.all()
-    #     serializer = OrderSerializer(orders, many=True)
+    #     app_orders = Order.objects.all()
+    #     serializer = OrderSerializer(app_orders, many=True)
     #     return Response(serializer.data)
 
 

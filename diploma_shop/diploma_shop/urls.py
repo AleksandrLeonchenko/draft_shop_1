@@ -24,15 +24,18 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include("frontend.urls")),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/schema/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger'),
+    path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path("api/", include('app_products.urls')),
+    path("api/", include('app_users.urls')),
+    path("api/", include('app_orders.urls')),
+    # path('api-auth/', include('rest_framework.urls')),
+    # path("api/", include('products.urls')),
     # path('auth/', include('djoser.urls')),
     # path('auth/', include('djoser.urls.authtoken')),
     # path('auth/', include('djoser.urls.jwt')),
     # path('ckeditor/', include('ckeditor_uploader.urls')),
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/schema/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger'),
-    path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    # path('api-auth/', include('rest_framework.urls')),
-    path("api/", include('products.urls')),
 ]
 
 if settings.DEBUG:

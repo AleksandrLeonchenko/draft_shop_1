@@ -57,8 +57,9 @@ INSTALLED_APPS = [
 
     'frontend.apps.FrontendConfig',
     'products.apps.ProductsConfig',
-    'users.apps.UsersConfig',
-    'orders.apps.OrdersConfig'
+    'app_users.apps.UsersConfig',
+    'app_orders.apps.OrdersConfig',
+    'app_products.apps.AppProductsConfig',
 ]
 
 MIDDLEWARE = [
@@ -173,7 +174,7 @@ REST_FRAMEWORK = {
     # "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     # "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
     # "DEFAULT_PAGINATION_CLASS": "products.service.CustomPaginationProducts",
-    # "PAGE_SIZE": 1,
+    # "PAGE_SIZE": 2,
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
     ],
@@ -324,3 +325,5 @@ SPECTACULAR_SETTINGS = {
 # APPEND_SLASH=False
 
 SESSION_SAVE_EVERY_REQUEST = True
+
+# CRISPY_TEMPLATE_PACK = 'bootstrap4'
