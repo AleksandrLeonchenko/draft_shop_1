@@ -1,135 +1,23 @@
-# import json
-import django_filters
-# from django.contrib.auth import authenticate, login, logout, get_user_model
-from django.core.exceptions import ObjectDoesNotExist
-from django.db import models, transaction
-from django.db.models import Avg, Case, When, Sum, Count, Prefetch, Q
-# from django.shortcuts import get_object_or_404
+
+from django.db.models import Avg, Count
 from django.utils import timezone
-# from rest_framework import status, generics, filters
-# from django.contrib.auth.models import Group
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
-# from rest_framework.decorators import parser_classes
-# from rest_framework.parsers import FileUploadParser, MultiPartParser, JSONParser
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.generics import GenericAPIView, ListCreateAPIView, ListAPIView, CreateAPIView, \
-    RetrieveUpdateAPIView, RetrieveAPIView
-# from rest_framework.mixins import ListModelMixin
-# from rest_framework import viewsets
-# from rest_framework.viewsets import ModelViewSet
+from rest_framework.generics import ListAPIView
 from rest_framework.filters import SearchFilter, OrderingFilter
-# from rest_framework.parsers import JSONParser
-# from django_filters import rest_framework as filters
-from django_filters import FilterSet, CharFilter, NumberFilter, BooleanFilter, ChoiceFilter, filters
-# from django.core.cache import cache
-# from pdb import set_trace
+from django_filters import FilterSet, CharFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from django.core.exceptions import FieldError
 from django_filters import rest_framework as filters
 
-# from .forms import BasketDeleteForm
 from .models import ProductInstance, Review, Category, Tag
 from .serializers import ProductListSerializer, ProductSalesSerializer, ProductDetailSerializer, CategorySerializer, \
     TagSerializer, ReviewCreateSerializer
 from .service import CustomPaginationProducts
-
-
-# from .serializers import *
-# from .models import *
-# from .service import *
-
-# from django_filters import filters
-
-# class PrefixedNumberFilter(filters.NumberFilter):
-#     def filter(self, qs, value):
-#         if value is not None:
-#             value = self.request.GET.get(f'filter[{self.field_name}]', None)
-#         return super().filter(qs, value)
-
-class PrefixedNumberFilter1(filters.NumberFilter):
-    def filter(self, qs, value):
-        if value in (None, ''):
-            return qs
-        return super().filter(qs, value)
-
-
-class PrefixedNumberFilter2(filters.NumberFilter):
-    def filter(self, qs, value):
-        print(
-            f"-----NumberFilter-----Filtering by {self.field_name} with value {value}")  # добавьте этот принт для отладки
-        return super().filter(qs, value)
-
-
-# class PrefixedBooleanFilter(filters.BooleanFilter):
-#     def filter(self, qs, value):
-#         if value is not None:
-#             value = self.request.GET.get(f'filter[{self.field_name}]', None)
-#         return super().filter(qs, value)
-
-class PrefixedBooleanFilter1(filters.BooleanFilter):
-    def filter(self, qs, value):
-        if value in (None, ''):
-            return qs
-        return super().filter(qs, value)
-
-
-class PrefixedBooleanFilter2(filters.BooleanFilter):
-    def filter(self, qs, value):
-        print(f"-----BooleanFilter-----Filtering by {self.field_name} with value {value}")  # принт для отладки
-        return super().filter(qs, value)
-
-
-class PrefixedNumberFilter3(filters.NumberFilter):
-    def filter(self, qs, value):
-        # Получаем значение из запроса
-        # value = self.parent.form.cleaned_data.get(f'filter[{self.field_name}]', None)
-        value = self.parent.request.GET.get(f'filter[{self.field_name}]', None)
-        print(f"-----NumberFilter-----Filtering by {self.field_name} with value {value}")  # принт для отладки
-        if value in (None, ''):
-            return qs
-        return super().filter(qs, value)
-
-
-class PrefixedNumberFilter4(filters.NumberFilter):
-    """
-    Фильтрация по небулевым полям НЕ работает
-    """
-
-    def filter(self, qs, value):
-        print(f"-----NumberFilter-----Filtering by {self.field_name} with value {value}")
-
-        if value is not None:
-            try:
-                # Пытаемся преобразовать строку в число
-                value = float(value)
-            except ValueError:
-                # Если преобразование не удалось, возвращаем исходный queryset
-                return qs
-
-        return super().filter(qs, value)
-
-
-# class PrefixedNumberFilter(filters.NumberFilter):
-#     def filter(self, qs, value):
-#         # Проверяем, есть ли у self.parent атрибут request
-#         request = getattr(self.parent, 'request', None)
-#         print("-----NumberFilter-----request-----", request)  # принт для отладки
-#         if request:
-#             value_str = request.GET.get(f'filter[{self.field_name}]', None)
-#             print("-----NumberFilter--if request---value_str-----", value_str)  # принт для отладки
-#             if value_str is not None and value_str != '':
-#                 try:
-#                     value = float(value_str)
-#                     print("-----NumberFilter--try---value-----", value)  # принт для отладки
-#                 except ValueError:
-#                     print("-----NumberFilter--except---qs-----", qs)  # принт для отладки
-#                     return qs
-#
-#         return super().filter(qs, value)
 
 
 class PrefixedNumberFilter(filters.NumberFilter):
@@ -140,38 +28,13 @@ class PrefixedNumberFilter(filters.NumberFilter):
     def filter(self, qs, value):
         request = getattr(self.parent, 'request', None)
         if request and self.query_param:
-            print("-----Keys in GET-----", request.GET.keys())
-
             value_str = request.GET.get(self.query_param, None)
-
-            print("-----NumberFilter--if request---value_str-----", value_str)  # принт для отладки
             if value_str is not None and value_str != '':
                 try:
                     value = float(value_str)
-                    print("-----NumberFilter--try---value-----", value)  # принт для отладки
                 except ValueError:
-                    print("-----NumberFilter--except---qs-----", qs)  # принт для отладки
                     return qs
 
-        return super().filter(qs, value)
-
-
-class PrefixedBooleanFilter4(filters.BooleanFilter):
-    """
-    Фильтрация по булевым полям хорошо работает
-    """
-
-    def filter(self, qs, value):
-        # Получаем значение из запроса
-        # value = self.parent.form.cleaned_data.get(f'filter[{self.field_name}]', None)
-        value_str = self.parent.request.GET.get(f'filter[{self.field_name}]', None)
-        # print(f"-----BooleanFilter-----Filtering by {self.field_name} with value {value}")  # принт для отладки
-        if value_str == 'true':
-            value = True
-        elif value_str == 'false':
-            value = False
-        else:
-            return qs
         return super().filter(qs, value)
 
 
@@ -192,10 +55,6 @@ class PrefixedBooleanFilter(filters.BooleanFilter):
                 return qs
 
         return super().filter(qs, value)
-
-
-# class CharFilterInFilter(filters.BaseInFilter, filters.CharFilter):
-#     pass
 
 
 class ProductFilter(FilterSet):
@@ -258,14 +117,10 @@ class CatalogView(ListAPIView):
     &filter[available]=true&currentPage=1&sort=reviews_count&sortType=inc&limit=20
     """
     permission_classes = (AllowAny,)
-    # queryset = ProductInstance.objects.filter(available=True).annotate(reviews_count=Count('reviews2'))
     serializer_class = ProductListSerializer
     pagination_class = CustomPaginationProducts
-    # filter_backends = (DjangoFilterBackend, OrderingFilter,)
     filter_backends = (DjangoFilterBackend, CustomOrderingFilter,)
     filterset_class = ProductFilter
-    # ordering_fields = ['rating', 'price', 'reviews_count', 'date']
-
     ordering_fields = ['rating', 'price', 'reviews', 'date']
     ordering_field_map = {
         'reviews': 'reviews_count'
@@ -289,7 +144,7 @@ class CatalogView(ListAPIView):
         if filterset.is_valid():
             queryset = filterset.qs
         else:
-            # Можно добавить логирование ошибок фильтрации
+            # Логирование ошибок фильтрации
             print(filterset.errors)
         if name_filter:
             queryset = queryset.filter(title__icontains=name_filter)
@@ -314,13 +169,6 @@ class ProductPopularView(APIView):
     """
     permission_classes = (AllowAny,)
 
-    # def get(self, request):
-    #     print('-------+++++------------------', request.user)
-    #     products = ProductInstance.objects.filter(available=True).order_by('-sort_index', '-number_of_purchases')[
-    #                :8].annotate(reviews_count=Count('reviews2'))
-    #     serializer = ProductListSerializer(products, many=True)
-    #     return Response(serializer.data)
-
     def get(self, request):
         # Использование filter_and_annotate для получения продуктов
         products = ProductInstance.objects.filter_and_annotate().order_by('-sort_index', '-number_of_purchases')[:8]
@@ -335,7 +183,6 @@ class ProductLimitedView(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request):
-        # products = ProductInstance.objects.filter(available=True, limited_edition=True)[:16].annotate(reviews_count=Count('reviews2'))
         products = ProductInstance.objects.filter_and_annotate()[:16]
         serializer = ProductListSerializer(products, many=True)
         return Response(serializer.data)
@@ -361,15 +208,9 @@ class ProductBannersView(APIView):
     """
     permission_classes = (AllowAny,)
 
-    # def get(self, request):
-    #     products = ProductInstance.objects.filter(available=True).order_by('-sort_index', '-number_of_purchases')[
-    #                :8].annotate(reviews_count=Count('reviews2'))
-    #     serializer = ProductListSerializer(products, many=True)
-    #     return Response(serializer.data)
-
     def get(self, request):
         # Использование filter_and_annotate для получения продуктов
-        products = ProductInstance.objects.filter_and_annotate().order_by('-sort_index', '-number_of_purchases')[:8]
+        products = ProductInstance.objects.filter_and_annotate().order_by('-sort_index', '-number_of_purchases')[:3]
         serializer = ProductListSerializer(products, many=True)
         return Response(serializer.data)
 

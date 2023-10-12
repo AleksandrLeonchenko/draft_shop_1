@@ -31,7 +31,6 @@ urlpatterns = [
     path("api/", include('app_users.urls')),
     path("api/", include('app_orders.urls')),
     # path('api-auth/', include('rest_framework.urls')),
-    # path("api/", include('products.urls')),
     # path('auth/', include('djoser.urls')),
     # path('auth/', include('djoser.urls.authtoken')),
     # path('auth/', include('djoser.urls.jwt')),

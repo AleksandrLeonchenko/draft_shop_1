@@ -56,7 +56,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
 
     'frontend.apps.FrontendConfig',
-    'products.apps.ProductsConfig',
+    # 'products.apps.ProductsConfig',
     'app_users.apps.UsersConfig',
     'app_orders.apps.OrdersConfig',
     'app_products.apps.AppProductsConfig',
@@ -159,7 +159,6 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'diploma-frontend', 'frontend', 'static'),
-    os.path.join(BASE_DIR, 'products', 'static')
 ]
 
 # Default primary key field type

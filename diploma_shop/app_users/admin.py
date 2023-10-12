@@ -1,12 +1,5 @@
-# from io import TextIOWrapper
-# from csv import DictReader
-from ckeditor_uploader.widgets import CKEditorUploadingWidget
-from django import forms
+
 from django.contrib import admin
-from django.shortcuts import render, redirect
-from django.urls import path
-from django.utils.safestring import mark_safe
-from django.http import HttpRequest, HttpResponse
 from .models import *
 
 

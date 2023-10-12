@@ -32,7 +32,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('email',)
 
 
-class ProfileAvatarSerializer(serializers.ModelSerializer):
+class ProfileAvatarSerializer(serializers.ModelSerializer): # сначала закомментировать, потом убрать
     """
     Аватар
     """
@@ -51,6 +51,14 @@ class ProfileAvatarSerializer(serializers.ModelSerializer):
         instance.avatar = avatar
         instance.save()
         return instance
+
+
+class AvatarUploadSerializer(serializers.ModelSerializer):
+    src = serializers.ImageField()
+
+    class Meta:
+        model = AvatarsImages
+        fields = ('src',)
 
 
 class ProfileImageSerializer(serializers.ModelSerializer):
@@ -75,7 +83,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         allow_blank=True
     )
 
-    avatar = ProfileImageSerializer(required=False)
+    avatar = ProfileImageSerializer(required=False, allow_null=True)  # аватар создаётся и изменяется через API raw data
 
     class Meta:
         model = Profile
@@ -102,6 +110,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         # Создаем или получаем существующий объект аватара
         if avatar_data:
             avatar, created = AvatarsImages.objects.get_or_create(**avatar_data)
+            # avatar = AvatarsImages.objects.create(**avatar_data)
+
             validated_data['avatar'] = avatar
 
         # Создаем профиль пользователя
@@ -152,6 +162,4 @@ class SignInSerializer(serializers.Serializer):
     Вход
     """
     username = serializers.CharField(max_length=50)
-    # login = serializers.CharField(source='username', max_length=50)
     password = serializers.CharField(max_length=50)
-

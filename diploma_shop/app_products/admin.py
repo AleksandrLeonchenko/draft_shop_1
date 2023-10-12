@@ -1,12 +1,8 @@
-# from io import TextIOWrapper
-# from csv import DictReader
+
 from ckeditor_uploader.widgets import CKEditorUploadingWidget
 from django import forms
 from django.contrib import admin
-from django.shortcuts import render, redirect
-from django.urls import path
 from django.utils.safestring import mark_safe
-from django.http import HttpRequest, HttpResponse
 from .models import *
 
 
@@ -106,7 +102,6 @@ class CategoryImagesAdmin(admin.ModelAdmin):
     search_fields = ('alt',)
 
 
-
 class ReviewAdmin(admin.ModelAdmin):
     list_display = (
         'id',
@@ -129,8 +124,6 @@ class ReviewAdmin(admin.ModelAdmin):
     search_fields = ('author', 'product')
 
 
-
-
 class TagAdmin(admin.ModelAdmin):
     list_display = ['id', 'name']
     list_display_links = ['id', 'name']
@@ -151,9 +144,6 @@ class RateAdmin(admin.ModelAdmin):
     ordering = ['id']
 
 
-
-
-
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(ProductInstance, ProductInstanceAdmin)
 admin.site.register(PropertyTypeProduct, PropertyTypeProductAdmin)
@@ -163,7 +153,6 @@ admin.site.register(CategoryImages, CategoryImagesAdmin)
 admin.site.register(Review, ReviewAdmin)
 admin.site.register(Tag, TagAdmin)
 admin.site.register(Rate, RateAdmin)
-
 
 admin.site.site_title = 'Админ-панель приложения app_products'
 admin.site.site_header = 'Админ-панель приложения app_products'

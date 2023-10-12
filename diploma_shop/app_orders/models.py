@@ -2,17 +2,17 @@
 # import datetime
 # from autoslug import AutoSlugField
 from django.contrib.auth import get_user_model
+from django.db.models import Sum, F, Count
 # from django.core.exceptions import ValidationError
 # from django.core.validators import FileExtensionValidator
 from django.db import models
-from django.contrib.auth.context_processors import auth
-from django.contrib.auth.models import User
+# from django.contrib.auth.context_processors import auth
+# from django.contrib.auth.models import User
 from PIL import Image
-from django.db.models import Sum, F, Count
-from django.utils import timezone
-from django.urls import reverse
-from phonenumber_field.modelfields import PhoneNumberField
-from django.utils.translation import gettext_lazy as _
+# from django.utils import timezone
+# from django.urls import reverse
+# from phonenumber_field.modelfields import PhoneNumberField
+# from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
 
@@ -178,6 +178,6 @@ class PaymentCard(models.Model):
         return f'{self.owner} - {self.name}'
 
     class Meta:
-        verbose_name = 'Параметры карты оплаты'
-        verbose_name_plural = 'Параметры карт оплаты'
+        verbose_name = 'Оплата'
+        verbose_name_plural = 'Оплаты'
         ordering = ['pk']

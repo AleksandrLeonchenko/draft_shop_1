@@ -1,6 +1,7 @@
 # from django.db.models import Count
 # from django.utils import formats
-from rest_framework import serializers, request, exceptions
+# from rest_framework import serializers, request, exceptions
+from rest_framework import serializers
 # from django.shortcuts import get_object_or_404
 # from rest_framework.serializers import raise_errors_on_nested_writes
 # from rest_framework.utils import model_meta
@@ -8,17 +9,8 @@ from rest_framework import serializers, request, exceptions
 # from datetime import datetime
 
 from . import models
-# from . import models
 from .models import User, BasketItem, Basket, Order, PaymentCard
 from app_products.models import ProductInstance
-# from diploma_shop.app_products.models import ProductInstance
-# from diploma_shop.app_products.models import ProductInstance
-# from rest_framework_recursive.fields import RecursiveField
-# from django.contrib.auth.models import Group
-
-# from .models import *
-# from ..app_products.models import ProductInstance
-# from ..app_products.serializers import TagSerializer, ProductImageSerializer
 from app_products.serializers import TagSerializer, ProductImageSerializer
 
 
@@ -49,7 +41,6 @@ class BasketProductSerializer(serializers.ModelSerializer):
     Данные продукта из корзины
     """
     tags = TagSerializer(many=True, read_only=True)
-    # images2 = ProductImageSerializer(many=True, read_only=True)
     images = ProductImageSerializer(source='images2', many=True, read_only=True)
     reviews = serializers.IntegerField(source='reviews_count', read_only=True)
     rating = serializers.FloatField(source='average_rating', read_only=True)
@@ -72,7 +63,6 @@ class BasketProductSerializer(serializers.ModelSerializer):
             'tags',
             'reviews',
             'rating',
-            # 'average_rating'
         )
 
     def to_representation(self, instance):
@@ -157,7 +147,6 @@ class OrderSerializer(serializers.ModelSerializer):
             if product.id in added_products:
                 continue
             product_serialized = BasketProductSerializer(product).data  # Сериализуем каждый продукт
-            # product_serialized["reviews"] = annotated_products_dict.get(product.id, 0)  # Добавляем аннотированное поле с ключом "reviews"
             product_serialized.update(annotated_products_dict.get(product.id, {'reviews': 0, 'rating': 0}))
             product_data.append(product_serialized)
             added_products[product.id] = True  # Отмечаем, что продукт добавлен
@@ -227,7 +216,6 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             if product.id in added_products:
                 continue
             product_serialized = BasketProductSerializer(product).data  # Сериализуем каждый продукт
-            # product_serialized["reviews"] = annotated_products_dict.get(product.id, 0)  # Добавляем аннотированное поле с ключом "reviews"
             product_serialized.update(annotated_products_dict.get(product.id, {'reviews': 0, 'rating': 0}))
             product_data.append(product_serialized)
             added_products[product.id] = True  # Отмечаем, что продукт добавлен

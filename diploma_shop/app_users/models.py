@@ -13,6 +13,7 @@ from PIL import Image
 # from django.utils import timezone
 from django.urls import reverse
 from phonenumber_field.modelfields import PhoneNumberField
+
 # from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
@@ -70,7 +71,6 @@ class AvatarsImages(models.Model):
         MAX_SIZE = 2 * 1024 * 1024  # 2 МБ
         if self.src.size > MAX_SIZE:
             raise ValidationError('Размер изображения должен быть не более 2 МБ.')
-        super().save(*args, **kwargs) # Добавил для корректного сохранения
 
 
 class Profile(models.Model):

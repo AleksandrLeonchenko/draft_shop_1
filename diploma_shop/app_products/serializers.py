@@ -1,13 +1,5 @@
-# from django.db.models import Count
-# from django.utils import formats
+
 from rest_framework import serializers, request, exceptions
-# from django.shortcuts import get_object_or_404
-# from rest_framework.serializers import raise_errors_on_nested_writes
-# from rest_framework.utils import model_meta
-# from django.contrib.auth import authenticate
-# from datetime import datetime
-# from rest_framework_recursive.fields import RecursiveField
-# from django.contrib.auth.models import Group
 
 from .models import *
 
@@ -176,12 +168,10 @@ class ProductSalesSerializer(serializers.ModelSerializer):
     """
     Список продуктов для распродажи
     """
-    # images = ProductImageSerializer(many=True)
     images = ProductImageSerializer(source='images2', many=True, read_only=True)
     id = serializers.SlugField(read_only=True)
     price = serializers.DecimalField(max_digits=10, decimal_places=2)
     salePrice = serializers.DecimalField(max_digits=10, decimal_places=2)
-
     dateFrom = serializers.SerializerMethodField()
     dateTo = serializers.SerializerMethodField()
 
@@ -238,9 +228,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     Вывод конкретного продукта
     """
     tags = TagSerializer(many=True)
-    # reviews = ReviewSerializer(many=True)
     reviews = ReviewSerializer(source='reviews2', many=True)
-    # images = ProductImageSerializer(many=True)
     images = ProductImageSerializer(source='images2', many=True, read_only=True)
     specifications = PropertyInstanceProductSerializer(source='specifications2', many=True)
     rating = serializers.FloatField(source='average_rating', read_only=True)

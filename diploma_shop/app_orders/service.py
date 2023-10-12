@@ -1,12 +1,12 @@
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 import json
-from rest_framework import parsers
+# from rest_framework import parsers
 # from django_filters import rest_framework as product_filters
 from rest_framework.parsers import JSONParser
 from rest_framework.exceptions import ParseError
 
-from .models import *
+# from .models import *
 
 
 class CustomPaginationProducts(PageNumberPagination):
@@ -54,14 +54,3 @@ class PlainListJSONParser(JSONParser):
             return json.loads(data)
         except ValueError as exc:
             raise ParseError('JSON parse error - %s' % str(exc))
-
-
-# class PlainListJSONParser(parsers.BaseParser):
-#     media_type = 'application/json'
-#
-#     def parse(self, stream, media_type=None, parser_context=None):
-#         data = stream.read().decode('utf-8')
-#         if not data:
-#             return {}
-#         # Здесь мы предполагаем, что на вход подается список, и просто оборачиваем его в словарь
-#         return {'products': json.loads(data)}
