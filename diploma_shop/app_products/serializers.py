@@ -1,13 +1,12 @@
-
 from rest_framework import serializers, request, exceptions
-
+from typing import List, Any, Union
 from .models import *
 
 
 class FilterReviewListSerializer(serializers.ListSerializer):
     """Фильтр комментариев комментариев, (parents), можно удалить"""
 
-    def to_representation(self, data):
+    def to_representation(self, data: Any) -> List:
         data = data.filter(parent=None)
         return super().to_representation(data)
 
@@ -15,7 +14,7 @@ class FilterReviewListSerializer(serializers.ListSerializer):
 class RecursiveSerializer(serializers.Serializer):
     """Для рекурсивного вывода категорий, если понадобится"""
 
-    def to_representation(self, value):
+    def to_representation(self, value: Any) -> Any:
         serializer = self.parent.parent.__class__(value, context=self.context)
         return serializer.data
 
@@ -32,7 +31,7 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             'rate',
         )
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Review:
         review = Review.objects.update_or_create(
             product=validated_data.get('product', None),
             author=validated_data.get('author', None),
@@ -62,7 +61,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     date = serializers.DateTimeField(format='%Y-%m-%d %H:%M', read_only=True)
     email = serializers.SerializerMethodField()
 
-    def get_email(self, obj):
+    def get_email(self, obj) -> str:
         return obj.author.email
 
     class Meta:
@@ -83,7 +82,6 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductImages
-        # fields = "__all__"
         fields = (
             'src',
             'alt',
@@ -97,7 +95,6 @@ class CategoryImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CategoryImages
-        # fields = "__all__"
         fields = (
             'src',
             'alt',
@@ -127,7 +124,6 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         list_serializer_class = FilterReviewListSerializer
         model = Category
-        # fields = "__all__"
         fields = (
             'id',
             'title',
@@ -175,10 +171,10 @@ class ProductSalesSerializer(serializers.ModelSerializer):
     dateFrom = serializers.SerializerMethodField()
     dateTo = serializers.SerializerMethodField()
 
-    def get_dateFrom(self, obj):
+    def get_dateFrom(self, obj) -> str:
         return obj.dateFrom.strftime("%m-%d")
 
-    def get_dateTo(self, obj):
+    def get_dateTo(self, obj) -> str:
         return obj.dateTo.strftime("%m-%d")
 
     class Meta:

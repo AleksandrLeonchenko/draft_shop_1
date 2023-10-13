@@ -1,26 +1,17 @@
-# from datetime import datetime
-# import datetime
-# from autoslug import AutoSlugField
 from django.contrib.auth import get_user_model
-# from django.core.exceptions import ValidationError
-# from django.core.validators import FileExtensionValidator
 from django.db import models
-# from django.contrib.auth.context_processors import auth
-from django.contrib.auth.models import User
 from PIL import Image
 from django.db.models import Sum, F, Count, Avg, ExpressionWrapper, fields
 from django.db.models.functions import Round
 from django.utils import timezone
 from django.urls import reverse
-# from phonenumber_field.modelfields import PhoneNumberField
-# from django.utils.translation import gettext_lazy as _
+from typing import List, Optional, Union
 
 User = get_user_model()
 
 
-
 class ProductInstanceManager(models.Manager):
-    def filter_and_annotate(self, product_ids=None):
+    def filter_and_annotate(self, product_ids: Optional[List[int]] = None) -> models.QuerySet:
         if product_ids is not None:
             queryset = self.filter(id__in=product_ids, available=True)
         else:
@@ -32,6 +23,7 @@ class ProductInstanceManager(models.Manager):
                 output_field=fields.DecimalField()
             )
         )
+
 
 class Category(models.Model):
     """
@@ -139,11 +131,10 @@ class ProductInstance(models.Model):
     def __str__(self):
         return self.title
 
-    def get_absolute_url(self):
-        # return reverse('product_detail', kwargs={'slug': self.slug})
+    def get_absolute_url(self) -> str:
         return reverse('product_detail', kwargs={"pk": self.pk})
 
-    def get_review(self):
+    def get_review(self) -> models.QuerySet:
         return self.reviews_set.filter(parent__isnull=True)
 
     class Meta:
@@ -263,11 +254,11 @@ class ProductImages(models.Model):
         verbose_name_plural = 'Изображения продуктов'
 
     @property
-    def photo_url(self):
+    def photo_url(self) -> Optional[str]:
         if self.src and hasattr(self.src, 'url'):
             return self.src.url
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         super().save()
         img = Image.open(self.src.path)
         if img.height > 300 or img.width > 300:
@@ -296,7 +287,7 @@ class CategoryImages(models.Model):
         verbose_name='Альтернативная строка изображения продукта'
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.alt}'
 
     class Meta:
@@ -304,11 +295,11 @@ class CategoryImages(models.Model):
         verbose_name_plural = 'Изображения категорий'
 
     @property
-    def photo_url(self):
+    def photo_url(self) -> Optional[str]:
         if self.src and hasattr(self.src, 'url'):
             return self.src.url
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         super().save()
         img = Image.open(self.src.path)
         if img.height > 25 or img.width > 25:
@@ -331,7 +322,7 @@ class Rate(models.Model):
         verbose_name = 'Значение рейтинга'
         verbose_name_plural = 'Значения рейтинга'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.value}'
         # return self.value
 
@@ -381,9 +372,8 @@ class Review(models.Model):
     )
     active = models.BooleanField(default=True, verbose_name='Активный')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.author} - {self.product}'
-        # return 'Comment by {} on {}'.format(self.name, self.post)
 
     class Meta:
         verbose_name = 'Отзыв к продукту'

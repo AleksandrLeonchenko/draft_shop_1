@@ -1,17 +1,10 @@
-# from django.db.models import Count
-# from django.utils import formats
-# from rest_framework import serializers, request, exceptions
+from typing import List, Dict, Union, Any
 from rest_framework import serializers
-# from django.shortcuts import get_object_or_404
-# from rest_framework.serializers import raise_errors_on_nested_writes
-# from rest_framework.utils import model_meta
-# from django.contrib.auth import authenticate
-# from datetime import datetime
-
 from . import models
 from .models import User, BasketItem, Basket, Order, PaymentCard
 from app_products.models import ProductInstance
 from app_products.serializers import TagSerializer, ProductImageSerializer
+from typing import Type
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -45,7 +38,6 @@ class BasketProductSerializer(serializers.ModelSerializer):
     reviews = serializers.IntegerField(source='reviews_count', read_only=True)
     rating = serializers.FloatField(source='average_rating', read_only=True)
     date = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)')
-    # date = serializers.DateTimeField(format='YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z]')
     count = serializers.IntegerField(default=0)
 
     class Meta:
@@ -65,7 +57,7 @@ class BasketProductSerializer(serializers.ModelSerializer):
             'rating',
         )
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: ProductInstance) -> Dict[str, Any]:
         representation = super().to_representation(instance)
 
         user = self.context.get('user')
@@ -109,28 +101,27 @@ class OrderSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(source='basket.user.profile.phone', read_only=True)
     products = serializers.SerializerMethodField(source='products2')
     totalCost = serializers.SerializerMethodField()
-    # createdAt = serializers.DateTimeField(format='%a %b %d %Y %H:%M:%S GMT%z (%Z)', read_only=True)
     createdAt = serializers.DateTimeField(format='%Y-%m-%d %H:%M', read_only=True)
     deliveryType = serializers.SerializerMethodField()
     paymentType = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
 
-    def get_deliveryType(self, obj):
+    def get_deliveryType(self, obj) -> str:
         delivery_type = obj.get_deliveryType_display()  # Получаем отображаемое значение поля "deliveryType"
         return delivery_type
 
-    def get_paymentType(self, obj):
+    def get_paymentType(self, obj) -> str:
         payment_type = obj.get_paymentType_display()
         return payment_type
 
-    def get_status(self, obj):
+    def get_status(self, obj) -> str:
         status = obj.get_status_display()
         return status
 
-    def get_totalCost(self, obj):
+    def get_totalCost(self, obj) -> float:
         return obj.calculate_total_cost()
 
-    def get_products(self, obj):
+    def get_products(self, obj) -> List[Dict[str, Any]]:
 
         products = obj.basket.products.all()  # Получаем все продукты в этом заказе
         product_ids = [product.id for product in products]  # Получаем их ID
@@ -152,8 +143,6 @@ class OrderSerializer(serializers.ModelSerializer):
             added_products[product.id] = True  # Отмечаем, что продукт добавлен
 
         return product_data
-
-
 
     class Meta:
         model = Order
@@ -184,25 +173,22 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     paymentType = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
 
-    def get_deliveryType(self, obj):
+    def get_deliveryType(self, obj) -> str:
         delivery_type = obj.get_deliveryType_display()  # Получаем отображаемое значение поля "deliveryType"
         return delivery_type
 
-    def get_paymentType(self, obj):
+    def get_paymentType(self, obj) -> str:
         payment_type = obj.get_paymentType_display()
         return payment_type
 
-    def get_status(self, obj):
+    def get_status(self, obj) -> str:
         status = obj.get_status_display()
         return status
 
-
-
-    def get_products(self, obj):
+    def get_products(self, obj) -> List[Dict[str, Any]]:
 
         products = obj.basket.products.all()  # Получаем все продукты в этом заказе
         product_ids = [product.id for product in products]  # Получаем их ID
-        # print('///---product_ids---///', product_ids)
         annotated_products = ProductInstance.objects.filter_and_annotate(product_ids)  # Аннотируем их
         annotated_products_dict = {
             product.id: {'reviews': product.reviews_count, 'rating': product.average_rating}
@@ -222,7 +208,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
 
         return product_data
 
-    def get_totalCost(self, obj):
+    def get_totalCost(self, obj) -> float:
         return obj.calculate_total_cost()
 
     class Meta:

@@ -1,18 +1,9 @@
-# from datetime import datetime
-# import datetime
-# from autoslug import AutoSlugField
 from django.contrib.auth import get_user_model
-from django.db.models import Sum, F, Count
-# from django.core.exceptions import ValidationError
-# from django.core.validators import FileExtensionValidator
 from django.db import models
-# from django.contrib.auth.context_processors import auth
-# from django.contrib.auth.models import User
+from typing import Any, List, Dict, Union
 from PIL import Image
-# from django.utils import timezone
-# from django.urls import reverse
-# from phonenumber_field.modelfields import PhoneNumberField
-# from django.utils.translation import gettext_lazy as _
+from django.db.models import Sum, F, Count, Model, OneToOneField, ManyToManyField, FloatField, ForeignKey, \
+    PositiveIntegerField, IntegerField, DateTimeField, CharField
 
 User = get_user_model()
 
@@ -40,7 +31,7 @@ class Basket(models.Model):
         # default=0
     )  # Можно удалить
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.user}'
 
     class Meta:
@@ -56,7 +47,6 @@ class BasketItem(models.Model):
     basket = models.ForeignKey(
         'Basket',
         on_delete=models.CASCADE,
-        # related_name='products',
         related_name='items2',
         verbose_name='Корзина'
     )
@@ -68,7 +58,7 @@ class BasketItem(models.Model):
     )
     count = models.PositiveIntegerField(verbose_name='Количество')
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.product} ({self.count} шт.)'
 
     class Meta:
@@ -77,7 +67,7 @@ class BasketItem(models.Model):
         ordering = ['id']
 
 
-class Order(models.Model):  # нужно будет убрать поле profile из модели, всё равно у basket есть user
+class Order(models.Model):
     """
     Модель заказа
     """
@@ -127,8 +117,7 @@ class Order(models.Model):  # нужно будет убрать поле profil
         # return f'{self.basket.user.username}'
         return self.address
 
-    def calculate_total_cost(self):
-        # total_cost = 777
+    def calculate_total_cost(self) -> float:
         total_cost = 0
         basket_items = self.basket.items2.all()  # Получаем все элементы в корзине
         for basket_item in basket_items:
@@ -173,7 +162,7 @@ class PaymentCard(models.Model):
         verbose_name='Код',
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         # return f'{self.owner}'
         return f'{self.owner} - {self.name}'
 
@@ -181,3 +170,4 @@ class PaymentCard(models.Model):
         verbose_name = 'Оплата'
         verbose_name_plural = 'Оплаты'
         ordering = ['pk']
+

@@ -1,4 +1,6 @@
 import json
+from typing import Any, List, Dict, Union
+from django.db.models import QuerySet
 from django.db import transaction
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -8,7 +10,6 @@ from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import RetrieveAPIView
-
 from .models import Basket, BasketItem, Order
 from .serializers import BasketProductSerializer, BasketItemSerializer, OrderSerializer, OrderDetailSerializer, \
     PaymentCardSerializer
@@ -20,11 +21,10 @@ class BasketView(APIView):
     """
     Корзина
     """
-    permission_classes = [permissions.IsAuthenticated]
-    # permission_classes = (AllowAny,)
-    authentication_classes = [SessionAuthentication]
+    permission_classes: List[Any] = [permissions.IsAuthenticated]
+    authentication_classes: List[Any] = [SessionAuthentication]
 
-    def get(self, request):
+    def get(self, request: Any) -> Response:
         basket = get_object_or_404(Basket, user=request.user)
         basket_items = basket.items2.all()
         product_ids = basket_items.values_list('product_id', flat=True)
@@ -34,7 +34,7 @@ class BasketView(APIView):
         serializer = BasketProductSerializer(products, many=True, context={'user': request.user})
         return Response(serializer.data)
 
-    def post(self, request):
+    def post(self, request: Any) -> Response:
         serializer = BasketItemSerializer(data=request.data)
         if serializer.is_valid():
             basket, created = Basket.objects.get_or_create(user=request.user)  # Измененная строка
@@ -61,7 +61,7 @@ class BasketView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request):
+    def delete(self, request: Any) -> Response:
         serializer = BasketItemSerializer(data=request.data)
         if serializer.is_valid():
             basket = Basket.objects.get(user=request.user)
@@ -87,20 +87,21 @@ class BasketView(APIView):
 
 
 class OrderAPIView(APIView):
-    parser_classes = [PlainListJSONParser]
-    permission_classes = [permissions.IsAuthenticated]
-    # permission_classes = [AllowAny]
-    authentication_classes = [SessionAuthentication]
+    """
+    Заказы
+    """
+    parser_classes: List[Any] = [PlainListJSONParser]
+    permission_classes: List[Any] = [permissions.IsAuthenticated]
+    authentication_classes: List[Any] = [SessionAuthentication]
 
-    def get(self, request, *args, **kwargs):
-        # orders = Order.objects.all()
+    def get(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         orders = Order.objects.filter(id=request.user.basket2.order.id)
         serializer = OrderSerializer(orders, many=True)
 
         return Response(serializer.data)
 
     @transaction.atomic  # использование транзакции для обеспечения целостности данных
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         user = request.user
 
         try:
@@ -116,27 +117,29 @@ class OrderAPIView(APIView):
 
 
 class OrderDetailAPIView(RetrieveAPIView):
-    permission_classes = [permissions.IsAuthenticated]
-    # permission_classes = [AllowAny]
-    authentication_classes = [SessionAuthentication]
-    queryset = Order.objects.all()
-    serializer_class = OrderDetailSerializer
+    """
+    Заказ
+    """
+    permission_classes: List[Any] = [permissions.IsAuthenticated]
+    authentication_classes: List[Any] = [SessionAuthentication]
+    queryset: QuerySet = Order.objects.all()
+    serializer_class: Any = OrderDetailSerializer
 
     # Маппинг строковых значений на числовые
-    delivery_type_mapping = {
+    delivery_type_mapping: Dict[str, int] = {
         'Доставка': 1,
         'Экспресс-доставка': 2,
     }
-    payment_type_mapping = {
+    payment_type_mapping: Dict[str, int] = {
         'Онлайн картой': 1,
         'Онлайн со случайного чужого счёта': 2,
     }
-    status_mapping = {
+    status_mapping: Dict[str, int] = {
         'ожидание платежа': 1,
         'оплачено': 2,
     }
 
-    def post(self, request, *args, **kwargs):  # работает как в сваггере
+    def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         try:
             order = self.get_object()  # получение объекта заказа по id
         except Http404:
@@ -168,7 +171,6 @@ class OrderDetailAPIView(RetrieveAPIView):
         order.basket.user.profile2.save()
         order.basket.user.save()
 
-        # return Response(OrderDetailSerializer(order).data, status=status.HTTP_200_OK)
         return Response(status=status.HTTP_200_OK)
 
 
@@ -176,12 +178,11 @@ class PaymentCardAPIView(generics.CreateAPIView):
     """
     Оплата (карта оплаты)
     """
-    permission_classes = [permissions.IsAuthenticated]
-    # permission_classes = [AllowAny]
-    authentication_classes = [SessionAuthentication]
-    serializer_class = PaymentCardSerializer
+    permission_classes: List[Any] = [permissions.IsAuthenticated]
+    authentication_classes: List[Any] = [SessionAuthentication]
+    serializer_class: Any = PaymentCardSerializer
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Any, *args: Any, **kwargs: Any) -> Response:
 
         try:
             # Пытаемся прочитать данные как JSON
@@ -189,10 +190,9 @@ class PaymentCardAPIView(generics.CreateAPIView):
         except (json.JSONDecodeError, IndexError):
             # Если это не удается, принимаем данные как обычные форменные данные
             data = request.POST.dict()
-            data.pop('csrfmiddlewaretoken', None)  # Удалите csrfmiddlewaretoken
+            data.pop('csrfmiddlewaretoken', None)  # Удаляем csrfmiddlewaretoken
 
         serializer = self.get_serializer(data=data)
-        # serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -203,4 +203,3 @@ class PaymentCardAPIView(generics.CreateAPIView):
         serializer.save(owner=request.user)
 
         return Response(status=status.HTTP_200_OK)
-        # return Response(serializer.data, status=status.HTTP_200_OK)

@@ -1,9 +1,6 @@
-from django.urls import path, include
-from . import views
+from django.urls import path
 from .api import BasketView, OrderAPIView, OrderDetailAPIView, PaymentCardAPIView
-# from .views import *
 
-# app_name = 'app_orders'
 
 urlpatterns = [
     path('basket', BasketView.as_view(), name='basket'),

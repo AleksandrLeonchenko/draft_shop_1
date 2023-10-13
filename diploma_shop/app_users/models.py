@@ -1,20 +1,11 @@
-# from datetime import datetime
-# import datetime
-
 from autoslug import AutoSlugField
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-# from django.core.validators import FileExtensionValidator
 from django.db import models
-# from django.contrib.auth.context_processors import auth
-# from django.contrib.auth.models import User
 from PIL import Image
-# from django.db.models import Sum, F, Count
-# from django.utils import timezone
 from django.urls import reverse
 from phonenumber_field.modelfields import PhoneNumberField
-
-# from django.utils.translation import gettext_lazy as _
+from typing import Optional
 
 User = get_user_model()
 
@@ -30,13 +21,7 @@ class AvatarsImages(models.Model):
         null=True,
         verbose_name='Изображение'
     )
-    # src = models.URLField(
-    #     max_length=200,
-    #     default='images/no_image.jpeg',
-    #     blank=True,
-    #     null=True,
-    #     verbose_name='Изображение'
-    # )  # Изменено на URLField
+
     alt = models.CharField(
         max_length=255,
         blank=True,
@@ -45,22 +30,22 @@ class AvatarsImages(models.Model):
         verbose_name='Альтернативная строка изображения аватара'
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.alt}'
 
     class Meta:
         verbose_name = 'Изображение аватара'
         verbose_name_plural = 'Изображения аватара'
 
-    def get_absolute_url(self):
+    def get_absolute_url(self) -> str:
         return self.src.url
 
     @property
-    def photo_url(self):
+    def photo_url(self) -> Optional[str]:
         if self.src and hasattr(self.src, 'url'):
             return self.src.url
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         super().save()
         img = Image.open(self.src.path)
         if img.height > 50 or img.width > 50:
@@ -78,10 +63,8 @@ class Profile(models.Model):
     Модель профиля пользователя
     """
     user = models.OneToOneField(
-        # User,
         to=User,
         on_delete=models.CASCADE,
-        # related_name='shop_profile_user',
         related_name='profile2',
         verbose_name='Пользователь'
     )
@@ -116,16 +99,16 @@ class Profile(models.Model):
         verbose_name = 'Профиль пользователя'
         verbose_name_plural = 'Профили пользователей'
 
-    def get_absolute_url(self):
+    def get_absolute_url(self) -> str:
         """
         Ссылка на профиль
         """
         return reverse('profile', kwargs={'slug': self.slug})
 
     @property
-    def photo_url(self):
+    def photo_url(self) -> Optional[str]:
         if self.avatar and hasattr(self.avatar, 'url'):
             return self.avatar.url
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.user.username} (Profile)'

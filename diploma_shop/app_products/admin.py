@@ -1,33 +1,25 @@
-
-from ckeditor_uploader.widgets import CKEditorUploadingWidget
 from django import forms
 from django.contrib import admin
 from django.utils.safestring import mark_safe
 from .models import *
+from typing import List, Tuple, Dict, Type, Union, Optional
 
 
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'description', 'parent']
-    list_display_links = ['id', 'title', 'description', 'parent']
-    search_fields = ['id', 'title']
-    save_on_top = True
+    list_display: List[str] = ['id', 'title', 'description', 'parent']
+    list_display_links: List[str] = ['id', 'title', 'description', 'parent']
+    search_fields: List[str] = ['id', 'title']
+    save_on_top: bool = True
 
-    def get_html_image(self, object):
+    def get_html_image(self, object) -> Optional[str]:
         if object.photo:
             return mark_safe(f"<img src='{object.image.url}' width=50>")
 
     get_html_image.short_description = "Миниатюра"
 
 
-class ProductInstanceAdminForm(forms.ModelForm):
-    """
-    Форма с виджетом ckeditor
-    """
-    full_description = forms.CharField(label='Описание', widget=CKEditorUploadingWidget())
-
-
 class ProductInstanceAdmin(admin.ModelAdmin):
-    list_display = (
+    list_display: Tuple[str, ...] = (
         'id',
         'title',
         'item_number',
@@ -41,7 +33,7 @@ class ProductInstanceAdmin(admin.ModelAdmin):
         'category',
         'order'
     )
-    list_display_links = (
+    list_display_links: Tuple[str, ...] = (
         'id',
         'title',
         'item_number',
@@ -55,14 +47,14 @@ class ProductInstanceAdmin(admin.ModelAdmin):
         'category',
         'order'
     )
-    list_filter = ('available', 'date')
-    prepopulated_fields = {"slug": ("title",)}
-    search_fields = ['id', 'title']
-    readonly_fields = ('date', 'updated_date', 'get_html_image')
-    ordering = ['date']
-    save_on_top = True
+    list_filter: Tuple[str, str] = ('available', 'date')
+    prepopulated_fields: Dict[str, Tuple[str]] = {"slug": ("title",)}
+    search_fields: List[str] = ['id', 'title']
+    readonly_fields: Tuple[str, ...] = ('date', 'updated_date', 'get_html_image')
+    ordering: List[str] = ['date']
+    save_on_top: bool = True
 
-    def get_html_image(self, object):
+    def get_html_image(self, object) -> Optional[str]:
         if object.photo:
             return mark_safe(f"<img src='{object.image.url}' width=50>")
 
@@ -75,35 +67,35 @@ class ProductInstanceAdmin(admin.ModelAdmin):
 
 
 class PropertyTypeProductAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name')
-    list_display_links = ('id', 'name')
-    search_fields = ('name',)
-    prepopulated_fields = {"slug": ("name",)}
-    ordering = ['id']
+    list_display: Tuple[str, str] = ('id', 'name')
+    list_display_links: Tuple[str, str] = ('id', 'name')
+    search_fields: Tuple[str] = ('name',)
+    prepopulated_fields: Dict[str, Tuple[str]] = {"slug": ("name",)}
+    ordering: List[str] = ['id']
 
 
 class PropertyInstanceProductAdmin(admin.ModelAdmin):
-    list_display = ('id', 'value', 'product', 'name')
-    list_display_links = ('id', 'value', 'product', 'name')
-    search_fields = ('value',)
-    prepopulated_fields = {"slug": ("value",)}
-    ordering = ['product']
+    list_display: Tuple[str, ...] = ('id', 'value', 'product', 'name')
+    list_display_links: Tuple[str, ...] = ('id', 'value', 'product', 'name')
+    search_fields: Tuple[str] = ('value',)
+    prepopulated_fields: Dict[str, Tuple[str]] = {"slug": ("value",)}
+    ordering: List[str] = ['product']
 
 
 class ProductImagesAdmin(admin.ModelAdmin):
-    list_display = ('id', 'alt', 'src', 'product')
-    list_display_links = ('id', 'alt', 'src', 'product')
-    search_fields = ('alt',)
+    list_display: Tuple[str, ...] = ('id', 'alt', 'src', 'product')
+    list_display_links: Tuple[str, ...] = ('id', 'alt', 'src', 'product')
+    search_fields: Tuple[str] = ('alt',)
 
 
 class CategoryImagesAdmin(admin.ModelAdmin):
-    list_display = ('id', 'alt', 'src')
-    list_display_links = ('id', 'alt', 'src')
-    search_fields = ('alt',)
+    list_display: Tuple[str, str, str] = ('id', 'alt', 'src')
+    list_display_links: Tuple[str, str, str] = ('id', 'alt', 'src')
+    search_fields: Tuple[str] = ('alt',)
 
 
 class ReviewAdmin(admin.ModelAdmin):
-    list_display = (
+    list_display: Tuple[str, ...] = (
         'id',
         'author',
         'rate',
@@ -113,35 +105,35 @@ class ReviewAdmin(admin.ModelAdmin):
         'product',
         'parent',
     )
-    list_display_links = (
+    list_display_links: Tuple[str, ...] = (
         'id',
         'author',
         'rate',
         'text',
         'date',
     )
-    list_editable = ('active',)
-    search_fields = ('author', 'product')
+    list_editable: Tuple[str] = ('active',)
+    search_fields: Tuple[str, str] = ('author', 'product')
 
 
 class TagAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name']
-    list_display_links = ['id', 'name']
-    search_fields = ['id']
-    ordering = ['id']
+    list_display: List[str] = ['id', 'name']
+    list_display_links: List[str] = ['id', 'name']
+    search_fields: List[str] = ['id']
+    ordering: List[str] = ['id']
 
 
 class RateAdmin(admin.ModelAdmin):
-    list_display = [
+    list_display: List[str] = [
         'id',
         'value',
     ]
-    list_display_links = [
+    list_display_links: List[str] = [
         'id',
         'value',
     ]
-    search_fields = ['id', 'value']
-    ordering = ['id']
+    search_fields: List[str] = ['id', 'value']
+    ordering: List[str] = ['id']
 
 
 admin.site.register(Category, CategoryAdmin)

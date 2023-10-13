@@ -1,34 +1,16 @@
-# import json
-# import django_filters
-# from django.db import connection
-# from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth import authenticate, login, logout
 from django.core.exceptions import ObjectDoesNotExist
-# from rest_framework.parsers import MultiPartParser, FormParser, FileUploadParser
 from rest_framework.parsers import MultiPartParser, FormParser
-# from django.db import models, transaction
-# from django.db.models import Avg, Case, When, Sum, Count, Prefetch, Q
-# from django.shortcuts import get_object_or_404
-# from rest_framework import status, generics, filters
 from rest_framework import status
-# from django.contrib.auth.models import Group
-# from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.authentication import SessionAuthentication
-# from rest_framework.decorators import parser_classes
-# from rest_framework.parsers import FileUploadParser, MultiPartParser, JSONParser
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
-# from rest_framework.request import Request
-# from rest_framework.response import Response
+from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.views import APIView
-# from django_filters import rest_framework as filters
-# from django_filters import FilterSet, CharFilter, NumberFilter, BooleanFilter, ChoiceFilter
-# from django.core.cache import cache
-# from pdb import set_trace
+from typing import Optional
 
-# from .forms import BasketDeleteForm
 from .serializers import *
-# from .models import *
 from .service import *
 
 
@@ -41,9 +23,7 @@ class ProfileView(APIView):
     authentication_classes = [SessionAuthentication]
     serializer_class = ProfileSerializer
 
-    # serializer = ProfileSerializer
-
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         try:
             profile = Profile.objects.get(user=request.user)
         except ObjectDoesNotExist:
@@ -51,9 +31,8 @@ class ProfileView(APIView):
         serializer = self.serializer_class(profile)
         return Response(serializer.data)
 
-    def post(self, request):  # этот вроде работает
+    def post(self, request: Request) -> Response:
         try:
-            # profile = Profile.objects.get(user=request.user)
             profile, created = Profile.objects.get_or_create(user=request.user)
             serializer = self.serializer_class(profile, data=request.data, partial=True)
         except ObjectDoesNotExist:
@@ -65,19 +44,21 @@ class ProfileView(APIView):
 
 
 class SignInView(APIView):
-    # authentication_classes = [SessionAuthentication, BasicAuthentication]
+    """
+    Вход
+    """
     authentication_classes = [SessionAuthentication]
     permission_classes = [AllowAny]
     serializer_class = SignInSerializer
 
-    def post(self, request):  # работает!
+    def post(self, request: Request) -> Response:
         try:
             # Пытаемся прочитать данные как JSON
             data = json.loads(list(request.POST.keys())[0])
         except (json.JSONDecodeError, IndexError):
             # Если это не удается, принимаем данные как обычные форменные данные
             data = request.POST.dict()
-            data.pop('csrfmiddlewaretoken', None)  # Удалите csrfmiddlewaretoken
+            data.pop('csrfmiddlewaretoken', None)  # Удаляем csrfmiddlewaretoken
 
         serializer = SignInSerializer(data=data)
 
@@ -102,10 +83,10 @@ class SignUpView(APIView):
     """
     permission_classes = [AllowAny]
     authentication_classes = [SessionAuthentication]
-    User = get_user_model()
     serializer_class = SignUpSerializer
+    User = get_user_model()
 
-    def post(self, request):  # с фронта работает
+    def post(self, request: Request) -> Response:
 
         try:
             # Пытаемся прочитать данные как JSON
@@ -138,12 +119,10 @@ class SignOutView(APIView):
     """
     Выход из системы
     """
-    # permission_classes = (AllowAny,)
+    # permission_classes = [AllowAny]
     authentication_classes = [SessionAuthentication]
 
-    # authentication_classes = [SessionAuthentication, BasicAuthentication]
-
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         logout(request)
         # request.session.flush()  # Очистка сессии
         # cache.clear()
@@ -157,9 +136,7 @@ class ChangePasswordAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     authentication_classes = [SessionAuthentication]
 
-    # permission_classes = [AllowAny]
-
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         current_password = request.data.get('currentPassword')
         new_password = request.data.get('newPassword')
         user = request.user
@@ -181,7 +158,7 @@ class UpdateAvatarAPIView(APIView):
     serializer_class = AvatarUploadSerializer
     parser_classes = [FormParser, MultiPartParser]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         # Создаем промежуточный словарь
         if request.data.get('avatar'):
             data = {

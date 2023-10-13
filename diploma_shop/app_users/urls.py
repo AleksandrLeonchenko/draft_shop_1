@@ -1,9 +1,6 @@
-from django.urls import path, include
-from . import views
-from .views import *
+from django.urls import path
 from .api import *
 
-# app_name = 'app_users'
 
 urlpatterns = [
 

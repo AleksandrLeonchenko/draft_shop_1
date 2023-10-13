@@ -1,30 +1,30 @@
-
 from django.contrib import admin
 from .models import *
+from typing import List, Tuple, Dict, Type
 
 
 class AvatarsImagesAdmin(admin.ModelAdmin):
-    list_display = ('id', 'alt', 'src')
-    list_display_links = ('id', 'alt', 'src')
-    search_fields = ('alt',)
+    list_display: Tuple[str, str, str] = ('id', 'alt', 'src')
+    list_display_links: Tuple[str, str, str] = ('id', 'alt', 'src')
+    search_fields: Tuple[str] = ('alt',)
 
 
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = [
+    list_display: List[str] = [
         'id',
         'user',
         'fullName',
         'phone',
     ]
-    list_display_links = [
+    list_display_links: List[str] = [
         'id',
         'user',
         'fullName',
         'phone',
     ]
-    search_fields = ['id', 'user']
-    ordering = ['id']
-    prepopulated_fields = {"slug": ("user",)}
+    search_fields: List[str] = ['id', 'user']
+    ordering: List[str] = ['id']
+    prepopulated_fields: Dict[str, Tuple[str]] = {"slug": ("user",)}
 
 
 admin.site.register(AvatarsImages, AvatarsImagesAdmin)

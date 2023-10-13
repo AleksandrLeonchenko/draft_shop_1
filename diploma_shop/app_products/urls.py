@@ -1,8 +1,7 @@
-from django.urls import path, include
+from django.urls import path
 from .api import ProductListView, CategoryView, CatalogView, ProductPopularView, ProductLimitedView, ProductSalesView, \
     ProductBannersView, TagsView, ProductDetailView, ReviewCreateView
 
-# app_name = 'app_products'
 
 urlpatterns = [
     path('', ProductListView.as_view(), name='products_list'),
