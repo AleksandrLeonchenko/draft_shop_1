@@ -24,19 +24,19 @@ class ProfileView(APIView):
     serializer_class = ProfileSerializer
 
     def get(self, request: Request) -> Response:
-        try:
+        try:  # Попытка получить профиль пользователя
             profile = Profile.objects.get(user=request.user)
         except ObjectDoesNotExist:
-            profile = Profile.objects.create(user=request.user)
+            profile = Profile.objects.create(user=request.user)  # Если профиль не найден, создаем новый профиль
         serializer = self.serializer_class(profile)
         return Response(serializer.data)
 
-    def post(self, request: Request) -> Response:
-        try:
+    def post(self, request: Request) -> Response:  # POST-метод для обновления профиля
+        try:  # Попытка получить или создать профиль пользователя
             profile, created = Profile.objects.get_or_create(user=request.user)
             serializer = self.serializer_class(profile, data=request.data, partial=True)
-        except ObjectDoesNotExist:
-            serializer = self.serializer_class(data=request.data)
+        except ObjectDoesNotExist:  # Если профиль не найден
+            serializer = self.serializer_class(data=request.data)  # Инициализируем новый сериализатор
         if serializer.is_valid():
             serializer.save(user=request.user, email=request.data['email'])
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -162,25 +162,25 @@ class UpdateAvatarAPIView(APIView):
         # Создаем промежуточный словарь
         if request.data.get('avatar'):
             data = {
-                'src': request.data.get('avatar')
+                'src': request.data.get('avatar')  # Извлекаем файл аватара из запроса
             }
         else:
             data = {
-                'src': request.data.get('src')
+                'src': request.data.get('src')  # Извлекаем ссылку на аватар из запроса
             }
 
         profile, _ = Profile.objects.get_or_create(user=request.user)
-        if profile.avatar:
-            file_serializer = AvatarUploadSerializer(instance=profile.avatar, data=data)  # Используем data
+        if profile.avatar:  # Если у профиля уже есть аватар
+            file_serializer = AvatarUploadSerializer(instance=profile.avatar, data=data)  # Обновляем существующий аватар
         else:
-            file_serializer = AvatarUploadSerializer(data=data)  # Используем data
+            file_serializer = AvatarUploadSerializer(data=data)  # Создаем новый аватар
         if file_serializer.is_valid():
-            avatar_instance = file_serializer.save()  # Сохраняем экземпляр AvatarsImages
+            avatar_instance = file_serializer.save()
             if not avatar_instance.alt:  # Проверка на отсутствие значения в поле alt
-                avatar_instance.alt = avatar_instance.src.name.split('/')[-1].split('.')[0]
+                avatar_instance.alt = avatar_instance.src.name.split('/')[-1].split('.')[0]  # Создаем значение для alt из имени файла
                 avatar_instance.save()
             profile.avatar = avatar_instance  # Присваиваем профилю корректный экземпляр
-            profile.save()  # Сохраняем профиль
+            profile.save()
             return Response(file_serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)

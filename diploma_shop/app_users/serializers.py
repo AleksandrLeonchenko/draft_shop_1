@@ -34,9 +34,9 @@ class ProfileImageSerializer(serializers.ModelSerializer):
         model = AvatarsImages
         fields = ('src', 'alt')
 
-    def get_src(self, obj) -> Optional[str]:
-        if obj.src and hasattr(obj.src, 'url'):
-            return obj.src.url
+    def get_src(self, obj) -> Optional[str]:  # Метод для получения URL изображения
+        if obj.src and hasattr(obj.src, 'url'):  # Проверка наличия атрибута url у объекта src
+            return obj.src.url  # Возвращает URL изображения
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -67,7 +67,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
         # Проверяем существование пользователя в валидированных данных
         if user_data:
-            user = User.objects.get(email=user_data.get('email'))
+            user = User.objects.get(email=user_data.get('email'))  # Получаем пользователя по email
             if not user:
                 raise serializers.ValidationError("User does not exist.")
         else:
@@ -85,23 +85,23 @@ class ProfileSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data: dict) -> Profile:
         user_data = validated_data.pop('user', None)
         new_email = validated_data.pop('email', None)
-        if user_data:
-            email = new_email
-            if email and email != instance.user.email:
-                instance.user.email = email
+        if user_data:  # Если есть данные пользователя
+            email = new_email  # Устанавливаем новый email
+            if email and email != instance.user.email:  # Если новый email и он отличается от текущего
+                instance.user.email = email  # Присваиваем новый email пользователю
                 instance.user.save()
 
         # Обрабатываем остальные поля
         avatar_data = validated_data.pop('avatar', None)
-        if avatar_data:
-            avatar, created = AvatarsImages.objects.get_or_create(**avatar_data)
-            instance.avatar = avatar
+        if avatar_data:  # Если есть данные аватара
+            avatar, created = AvatarsImages.objects.get_or_create(**avatar_data)  # Создаем или получаем существующий аватар
+            instance.avatar = avatar  # Присваиваем аватар экземпляру профиля
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+        for attr, value in validated_data.items():  # Проходим по оставшимся валидированным данным
+            setattr(instance, attr, value)  # Присваиваем значения экземпляру профиля
         instance.save()
 
-        return instance
+        return instance  # Возвращаем обновленный профиль
 
 
 class SignUpSerializer(serializers.Serializer):

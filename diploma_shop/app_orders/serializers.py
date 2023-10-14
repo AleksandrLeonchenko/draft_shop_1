@@ -58,14 +58,14 @@ class BasketProductSerializer(serializers.ModelSerializer):
         )
 
     def to_representation(self, instance: ProductInstance) -> Dict[str, Any]:
-        representation = super().to_representation(instance)
+        representation = super().to_representation(instance)  # Получаем базовое представление продукта
 
-        user = self.context.get('user')
+        user = self.context.get('user')  # Получаем пользователя из контекста
         if user:
-            basket = Basket.objects.get(user=user)
-            basket_items = BasketItem.objects.filter(product=instance, basket=basket)
+            basket = Basket.objects.get(user=user)  # Получаем корзину пользователя
+            basket_items = BasketItem.objects.filter(product=instance, basket=basket)  # Получаем товары в корзине
             total_count = basket_items.aggregate(total_count=models.Sum('count'))['total_count'] or 0
-            representation['count'] = total_count
+            representation['count'] = total_count  # Добавляем количество данного продукта в корзине
 
         return representation
 

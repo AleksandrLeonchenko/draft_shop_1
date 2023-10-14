@@ -21,24 +21,33 @@ from .service import CustomPaginationProducts
 
 
 class PrefixedNumberFilter(filters.NumberFilter):
+    """
+    Класс для конвертации строкового значения во float
+    """
+
     def __init__(self, *args, **kwargs):
-        self.query_param = kwargs.pop('query_param', None)
+        self.query_param = kwargs.pop('query_param', None)  # Забираем query_param из аргументов
         super().__init__(*args, **kwargs)
 
     def filter(self, qs: QuerySet, value: float) -> QuerySet:
-        request = getattr(self.parent, 'request', None)
+        # Проверяем, есть ли у self.parent атрибут request
+        request = getattr(self.parent, 'request', None)  # Извлекаем атрибут 'request' из родительского объекта
         if request and self.query_param:
             value_str = request.GET.get(self.query_param, None)
-            if value_str is not None and value_str != '':
+            if value_str is not None and value_str != '':  # Проверяем, что значение не пустое
                 try:
-                    value = float(value_str)
+                    value = float(value_str)  # Конвертируем строковое значение во float
                 except ValueError:
-                    return qs
+                    return qs  # Возвращаем исходный QuerySet без изменений
 
-        return super().filter(qs, value)
+        return super().filter(qs, value)  # Если все в порядке, вызываем родительский метод filter
 
 
 class PrefixedBooleanFilter(filters.BooleanFilter):
+    """
+    Класс для конвертации строкового значения в булево
+    """
+    # Определение словаря для маппинга строковых значений в булевы
     BOOLEAN_MAP = {
         'true': True,
         'false': False
@@ -50,7 +59,7 @@ class PrefixedBooleanFilter(filters.BooleanFilter):
         if request:
             value_str = request.GET.get(f'filter[{self.field_name}]', None)
             if value_str in self.BOOLEAN_MAP:
-                value = self.BOOLEAN_MAP[value_str]
+                value = self.BOOLEAN_MAP[value_str]  # Получаем булево значение из строки
             else:
                 return qs
 
@@ -77,18 +86,23 @@ class ProductFilter(FilterSet):
 
 
 class CustomOrderingFilter(OrderingFilter):
-    # Карта для переопределения полей сортировки
+    """
+    Класс для кастомной сортировки
+    """
+    # Словарь для маппинга полей сортировки
     ordering_field_map = {
         'reviews': 'reviews_count'
     }
 
-    def filter_queryset(self, request: Request, queryset: QuerySet, view) -> QuerySet:
-        ordering = self.get_ordering(request, queryset, view)
+    def filter_queryset(self, request: Request, queryset: QuerySet,
+                        view) -> QuerySet:  # Переопределение метода фильтрации по порядку
+        ordering = self.get_ordering(request, queryset, view)  # Получение параметров сортировки из запроса
         if ordering:
             # Применяем наше переопределение
-            ordering = [self.ordering_field_map.get(field, field) for field in ordering]
+            ordering = [self.ordering_field_map.get(field, field) for field in
+                        ordering]  # Применяем маппинг полей сортировки
             try:
-                return queryset.order_by(*ordering)
+                return queryset.order_by(*ordering)  # Пытаемся отсортировать queryset
             except FieldError:
                 pass
         return queryset
@@ -130,39 +144,40 @@ class CatalogView(ListAPIView):
 
     def get_ordering(self) -> list[str]:
         ordering = super().get_ordering()
-        if ordering:
-            ordering_field_map = {
+        if ordering:  # Если параметры сортировки есть
+            ordering_field_map = {  # Словарь для переопределения полей сортировки
                 'reviews': 'reviews_count'
             }
-            return [ordering_field_map.get(field, field) for field in ordering]
-        return ordering
+            return [ordering_field_map.get(field, field) for field in ordering]  # Применяем маппинг полей сортировки
+        return ordering  # Или возвращаем исходные параметры сортировки
 
     def get_queryset(self) -> QuerySet:
         queryset = ProductInstance.objects.filter_and_annotate()
-        name_filter = self.request.query_params.get('filter[name]', None)
+        name_filter = self.request.query_params.get('filter[name]', None)  # Получение фильтра по имени из запроса
 
         # Фильтрация
-        filterset = ProductFilter(self.request.GET, queryset=queryset)
+        filterset = ProductFilter(self.request.GET, queryset=queryset)  # Применение фильтров к набору данных
         if filterset.is_valid():
-            queryset = filterset.qs
+            queryset = filterset.qs  # Применяем фильтры к набору данных
         else:
             # Логирование ошибок фильтрации
             print(filterset.errors)
         if name_filter:
-            queryset = queryset.filter(title__icontains=name_filter)
+            queryset = queryset.filter(title__icontains=name_filter)  # Применяем фильтр по имени, если он задан
 
         # Сортировка
-        current_page = self.request.query_params.get('currentPage', None)
-        sort = self.request.query_params.get('sort', None)
-        sort_type = self.request.query_params.get('sortType', None)
+        current_page = self.request.query_params.get('currentPage', None)  # Текущая страница
+        sort = self.request.query_params.get('sort', None)  # Параметр сортировки
+        sort_type = self.request.query_params.get('sortType', None)  # Тип сортировки
         # Перехват полей для сортировки
         if sort == 'reviews':
-            sort = 'reviews_count'
+            sort = 'reviews_count' # Если сортировка по отзывам, изменяем параметр сортировки
         # Применяем сортировку на основе sort и sortType
-        if sort and sort_type:
-            direction = '' if sort_type == 'inc' else '-'
-            queryset = queryset.order_by(f"{direction}{sort}")
+        if sort and sort_type:  # Если заданы параметр и тип сортировки
+            direction = '' if sort_type == 'inc' else '-'  # Определяем направление сортировки
+            queryset = queryset.order_by(f"{direction}{sort}")  # Применяем сортировку к набору данных
         return queryset
+
 
 
 class ProductPopularView(APIView):
@@ -280,8 +295,9 @@ class ReviewCreateView(APIView):
         product = ProductInstance.objects.get(id=pk, available=True)
 
         if review.is_valid():
+            # Проверяем, существует ли уже отзыв от этого пользователя на данный продукт
             if Review.objects.filter(product=product, author=author).exists():
-                Review.objects.filter(
+                Review.objects.filter(  # Если существует, то обновляем отзыв и рейтинг
                     product=product,
                     author=author
                 ).update(
@@ -289,10 +305,11 @@ class ReviewCreateView(APIView):
                     text=review.data['text']
                 )
             else:
-                review.save(
+                review.save(  # Если нет, то сохраняем новый отзыв
                     product=product,
                     author=author,
                 )
             return Response(status=201)
         else:
             return Response(status=400)
+

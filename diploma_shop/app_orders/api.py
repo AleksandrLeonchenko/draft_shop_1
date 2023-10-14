@@ -25,39 +25,36 @@ class BasketView(APIView):
     authentication_classes: List[Any] = [SessionAuthentication]
 
     def get(self, request: Any) -> Response:
-        basket = get_object_or_404(Basket, user=request.user)
-        basket_items = basket.items2.all()
-        product_ids = basket_items.values_list('product_id', flat=True)
-
-        # Используем новый метод менеджера
-        products = ProductInstance.objects.filter_and_annotate(product_ids)
-        serializer = BasketProductSerializer(products, many=True, context={'user': request.user})
+        basket = get_object_or_404(Basket, user=request.user)  # Получаем корзину текущего пользователя
+        basket_items = basket.items2.all()  # Получаем все элементы корзины
+        product_ids = basket_items.values_list('product_id', flat=True)  # Получаем ID всех продуктов в корзине
+        products = ProductInstance.objects.filter_and_annotate(product_ids)  # Получаем продукты и их аннотации
+        serializer = BasketProductSerializer(products, many=True, context={'user': request.user})  # Сериализация данных
         return Response(serializer.data)
 
     def post(self, request: Any) -> Response:
         serializer = BasketItemSerializer(data=request.data)
         if serializer.is_valid():
-            basket, created = Basket.objects.get_or_create(user=request.user)  # Измененная строка
+            basket, created = Basket.objects.get_or_create(
+                user=request.user)  # Получаем или создаем корзину пользователя
             product_id = serializer.validated_data['id']
             count = serializer.validated_data['count']
-            product = ProductInstance.objects.get(id=product_id)
+            product = ProductInstance.objects.get(id=product_id)  # Получаем конкретный продукт
 
-            # Пытаемся получить существующий элемент корзины для данного продукта
             try:
-                basket_item = BasketItem.objects.get(basket=basket, product=product)
-                # Если существует, обновляем его количество
-                basket_item.count += count
-                basket_item.save()
-            except BasketItem.DoesNotExist:
-                # Если не существует, создаем новый элемент корзины
-                basket_item = BasketItem.objects.create(basket=basket, product=product, count=count)
-                basket_item.save()
+                basket_item = BasketItem.objects.get(basket=basket, product=product)  # Ищем продукт в корзине
+                basket_item.count += count  # Обновляем количество
+                # basket_item.save()
+            except BasketItem.DoesNotExist:  # Если продукта нет в корзине
+                basket_item = BasketItem.objects.create(basket=basket, product=product,
+                                                        count=count)  # Создаем новый элемент корзины
+                # basket_item.save()
 
+            basket_item.save()
             basket_items = basket.items2.all()
             product_ids = basket_items.values_list('product_id', flat=True)
             products = ProductInstance.objects.filter_and_annotate(product_ids)
             serializer = BasketProductSerializer(products, many=True, context={'user': request.user})
-
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

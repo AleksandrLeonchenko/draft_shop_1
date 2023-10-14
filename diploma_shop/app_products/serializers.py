@@ -7,16 +7,17 @@ class FilterReviewListSerializer(serializers.ListSerializer):
     """Фильтр комментариев комментариев, (parents), можно удалить"""
 
     def to_representation(self, data: Any) -> List:
-        data = data.filter(parent=None)
-        return super().to_representation(data)
+        data = data.filter(parent=None)  # Фильтрация отзывов без родителей (главные отзывы)
+        return super().to_representation(data)  # Возвращаем репрезентацию с использованием родительского метода
 
 
 class RecursiveSerializer(serializers.Serializer):
     """Для рекурсивного вывода категорий, если понадобится"""
 
     def to_representation(self, value: Any) -> Any:
-        serializer = self.parent.parent.__class__(value, context=self.context)
-        return serializer.data
+        serializer = self.parent.parent.__class__(value,
+                                                  context=self.context)  # Создаем новый экземпляр текущего сериализатора
+        return serializer.data  # Возвращаем данные нового сериализатора
 
 
 class ReviewCreateSerializer(serializers.ModelSerializer):
@@ -63,6 +64,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def get_email(self, obj) -> str:
         return obj.author.email
+
 
     class Meta:
         model = Review

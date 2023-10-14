@@ -7,30 +7,30 @@ from typing import List, Union, Any, Dict
 
 
 class CustomPaginationProducts(PageNumberPagination):
-    page_size: int = 3
-    page_query_param: str = 'currentPage'
-    max_page_size: int = 20
+    page_size: int = 2  # Определение базового размера страницы
+    page_query_param: str = 'currentPage'  # Параметр запроса для указания текущей страницы
+    max_page_size: int = 20  # Определение максимального размера страницы
 
     def get_paginated_response(self, data: List[Dict[str, Any]]) -> Response:
         return Response({
-            'items': data,
-            'currentPage': self.page.number,
-            'lastPage': self.page.paginator.count,
+            'items': data,  # Возвращает текущие элементы страницы
+            'currentPage': self.page.number,  # Возвращает номер текущей страницы
+            'lastPage': self.page.paginator.count,  # Возвращает общее количество элементов
         })
 
 
 class PaginationProducts(PageNumberPagination):
-    page_size: int = 2
-    max_page_size: int = 1000
+    page_size: int = 2  # Определение базового размера страницы
+    max_page_size: int = 1000  # Определение максимального размера страницы
 
     def get_paginated_response(self, data: List[Dict[str, Any]]) -> Response:
         return Response({
             'items': {
-                'next': self.get_next_link(),
-                'previous': self.get_previous_link()
+                'next': self.get_next_link(),  # Получение ссылки на следующую страницу
+                'previous': self.get_previous_link()  # Получение ссылки на предыдущую страницу
             },
-            'count': self.page.paginator.count,
-            'results': data
+            'count': self.page.paginator.count,  # Возвращает общее количество элементов
+            'results': data  # Возвращает текущие элементы страницы
         })
 
 
@@ -40,15 +40,16 @@ class PlainListJSONParser(JSONParser):
     Это позволяет в POST-запросе отправлять данные в формате массива.
     """
 
-    media_type: str = 'application/json'
+    media_type: str = 'application/json'  # Определение медиа-типа
 
     def parse(self, stream: Any, media_type: Union[None, str] = None,
               parser_context: Union[None, Dict[str, Any]] = None) -> List[Any]:
-        parser_context = parser_context or {}
-        encoding = parser_context.get('encoding', 'utf-8')
+        parser_context = parser_context or {}  # Установка контекста анализатора
+        encoding = parser_context.get('encoding',
+                                      'utf-8')  # Получение кодировки из контекста или установка значения по умолчанию
 
         try:
-            data = stream.read().decode(encoding)
-            return json.loads(data)
+            data = stream.read().decode(encoding)  # Чтение и декодирование данных
+            return json.loads(data)  # Конвертация декодированных данных из JSON в Python список
         except ValueError as exc:
-            raise ParseError('JSON parse error - %s' % str(exc))
+            raise ParseError('JSON parse error - %s' % str(exc))  # Возбуждение исключения в случае ошибки анализа
