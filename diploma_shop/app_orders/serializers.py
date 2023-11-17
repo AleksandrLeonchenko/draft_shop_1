@@ -1,10 +1,10 @@
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Any
 from rest_framework import serializers
 from . import models
 from .models import User, BasketItem, Basket, Order, PaymentCard
 from app_products.models import ProductInstance
 from app_products.serializers import TagSerializer, ProductImageSerializer
-from typing import Type
+# from typing import Type
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -58,12 +58,18 @@ class BasketProductSerializer(serializers.ModelSerializer):
         )
 
     def to_representation(self, instance: ProductInstance) -> Dict[str, Any]:
-        representation = super().to_representation(instance)  # Получаем базовое представление продукта
+        """
+        Если пользователь передан в контекст, ищем объект корзины для этого пользователя
+        и подсчитываем общее количество данного продукта в корзине.
+        Затем это общее количество добавляем в представление продукта в поле count:
+        """
+        representation: Dict[str, Any] = super().to_representation(instance)  # Получаем базовое представление продукта
 
         user = self.context.get('user')  # Получаем пользователя из контекста
         if user:
             basket = Basket.objects.get(user=user)  # Получаем корзину пользователя
-            basket_items = BasketItem.objects.filter(product=instance, basket=basket)  # Получаем товары в корзине
+            basket_items = BasketItem.objects.filter(product=instance, basket=basket)  # Получаем продукты в корзине
+            # Получаем общее количества продукта в корзине с использованием. Если количество не определено, то 0.
             total_count = basket_items.aggregate(total_count=models.Sum('count'))['total_count'] or 0
             representation['count'] = total_count  # Добавляем количество данного продукта в корзине
 

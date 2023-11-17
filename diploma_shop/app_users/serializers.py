@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from typing import Optional, Any, List, Union
-from .models import *
+
+from .models import User, AvatarsImages, Profile
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -94,7 +95,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         # Обрабатываем остальные поля
         avatar_data = validated_data.pop('avatar', None)
         if avatar_data:  # Если есть данные аватара
-            avatar, created = AvatarsImages.objects.get_or_create(**avatar_data)  # Создаем или получаем существующий аватар
+            avatar, created = AvatarsImages.objects.get_or_create(
+                **avatar_data)  # Создаем или получаем существующий аватар
             instance.avatar = avatar  # Присваиваем аватар экземпляру профиля
 
         for attr, value in validated_data.items():  # Проходим по оставшимся валидированным данным

@@ -108,8 +108,6 @@ class OrderAPIView(APIView):
 
         # Если у пользователя уже есть корзина, просто создаем заказ и привязываем к этой корзине
         order = Order.objects.create(basket=basket)
-
-        # Возвращаем ответ с идентификатором созданного заказа
         return Response({"orderId": order.id}, status=status.HTTP_201_CREATED)
 
 

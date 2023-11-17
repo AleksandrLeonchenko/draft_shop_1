@@ -1,12 +1,14 @@
 from django.contrib import admin
-from .models import *
 from typing import List, Tuple, Dict, Type
+
+from .models import AvatarsImages, Profile
 
 
 class AvatarsImagesAdmin(admin.ModelAdmin):
-    list_display: Tuple[str, str, str] = ('id', 'alt', 'src')
-    list_display_links: Tuple[str, str, str] = ('id', 'alt', 'src')
-    search_fields: Tuple[str] = ('alt',)
+    list_display: List[str] = ['id', 'alt', 'src']
+    list_display_links: List[str] = ['id', 'alt', 'src']
+    search_fields: List[str] = ['alt']
+    save_on_top: bool = True  # кнопка "Сохранить" в верхней части страницы редактирования объекта в админ- панели
 
 
 class ProfileAdmin(admin.ModelAdmin):
@@ -24,7 +26,8 @@ class ProfileAdmin(admin.ModelAdmin):
     ]
     search_fields: List[str] = ['id', 'user']
     ordering: List[str] = ['id']
-    prepopulated_fields: Dict[str, Tuple[str]] = {"slug": ("user",)}
+    prepopulated_fields: Dict[str, Tuple[str]] = {"slug": ("user",)}  # автозаполнение поля
+    save_on_top: bool = True  # кнопка "Сохранить" в верхней части страницы редактирования объекта в админ- панели
 
 
 admin.site.register(AvatarsImages, AvatarsImagesAdmin)

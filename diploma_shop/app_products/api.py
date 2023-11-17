@@ -2,6 +2,7 @@ from django.db.models.query import QuerySet
 from django_filters.rest_framework import FilterSet, OrderingFilter, DjangoFilterBackend, CharFilter
 from django.db.models import Avg, Count
 from django.utils import timezone
+from django.http import QueryDict
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -25,6 +26,7 @@ class PrefixedNumberFilter(filters.NumberFilter):
     Класс для конвертации строкового значения во float
     """
 
+    #  Добавляем новый атрибут query_param к классу PrefixedNumberFilter
     def __init__(self, *args, **kwargs):
         self.query_param = kwargs.pop('query_param', None)  # Забираем query_param из аргументов
         super().__init__(*args, **kwargs)
@@ -54,7 +56,7 @@ class PrefixedBooleanFilter(filters.BooleanFilter):
     }
 
     def filter(self, qs: QuerySet, value: bool) -> QuerySet:
-        # Проверяем, есть ли у self.parent атрибут request
+        # Проверяем, есть ли у объекта-родителя self.parent атрибут request
         request = getattr(self.parent, 'request', None)
         if request:
             value_str = request.GET.get(f'filter[{self.field_name}]', None)
@@ -77,8 +79,8 @@ class ProductFilter(FilterSet):
     freeDelivery = PrefixedBooleanFilter(field_name='freeDelivery')
     available = PrefixedBooleanFilter(field_name='available')
     category = PrefixedNumberFilter(field_name='category__id')
-    property = CharFilter(field_name='specifications__value', lookup_expr='icontains')
-    name = CharFilter(field_name='title', lookup_expr='icontains')
+    property = CharFilter(field_name='specifications__value', lookup_expr='icontains')  # поиск по вх. без учёта рег.
+    name = CharFilter(field_name='title', lookup_expr='icontains')  # поиск по вхождению без учёта регистра символов
 
     class Meta:
         model = ProductInstance
@@ -153,7 +155,11 @@ class CatalogView(ListAPIView):
 
     def get_queryset(self) -> QuerySet:
         queryset = ProductInstance.objects.filter_and_annotate()
-        name_filter = self.request.query_params.get('filter[name]', None)  # Получение фильтра по имени из запроса
+        # name_filter = self.request.query_params.get('filter[name]', None)  # Получение фильтра по имени из запроса
+        name_filter = None
+        filter_param = self.request.query_params.get('filter', None)  # Получение фильтра по имени из запроса
+        if filter_param and '=' in filter_param:
+            name_filter = filter_param.split('=')[-1]
 
         # Фильтрация
         filterset = ProductFilter(self.request.GET, queryset=queryset)  # Применение фильтров к набору данных
@@ -171,13 +177,12 @@ class CatalogView(ListAPIView):
         sort_type = self.request.query_params.get('sortType', None)  # Тип сортировки
         # Перехват полей для сортировки
         if sort == 'reviews':
-            sort = 'reviews_count' # Если сортировка по отзывам, изменяем параметр сортировки
+            sort = 'reviews_count'  # Если сортировка по отзывам, изменяем параметр сортировки
         # Применяем сортировку на основе sort и sortType
         if sort and sort_type:  # Если заданы параметр и тип сортировки
             direction = '' if sort_type == 'inc' else '-'  # Определяем направление сортировки
             queryset = queryset.order_by(f"{direction}{sort}")  # Применяем сортировку к набору данных
         return queryset
-
 
 
 class ProductPopularView(APIView):
@@ -312,4 +317,3 @@ class ReviewCreateView(APIView):
             return Response(status=201)
         else:
             return Response(status=400)
-

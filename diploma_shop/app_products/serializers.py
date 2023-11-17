@@ -1,6 +1,9 @@
 from rest_framework import serializers, request, exceptions
 from typing import List, Any, Union
-from .models import *
+
+from .models import Review, ProductImages, CategoryImages, Tag, Category, ProductInstance, \
+    PropertyTypeProduct, PropertyInstanceProduct
+from app_users.models import User
 
 
 class FilterReviewListSerializer(serializers.ListSerializer):
@@ -16,7 +19,7 @@ class RecursiveSerializer(serializers.Serializer):
 
     def to_representation(self, value: Any) -> Any:
         serializer = self.parent.parent.__class__(value,
-                                                  context=self.context)  # Создаем новый экземпляр текущего сериализатора
+                                                  context=self.context)  # Создаем новый экз. текущего сериализатора
         return serializer.data  # Возвращаем данные нового сериализатора
 
 
@@ -64,7 +67,6 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def get_email(self, obj) -> str:
         return obj.author.email
-
 
     class Meta:
         model = Review

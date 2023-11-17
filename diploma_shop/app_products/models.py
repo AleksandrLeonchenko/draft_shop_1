@@ -11,6 +11,7 @@ User = get_user_model()
 
 
 class ProductInstanceManager(models.Manager):
+    # Добавляем количество отзывов и среднее значение рейтинга
     def filter_and_annotate(self, product_ids: Optional[List[int]] = None) -> models.QuerySet:
         if product_ids is not None:
             queryset = self.filter(id__in=product_ids, available=True)

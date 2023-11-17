@@ -1,4 +1,6 @@
-from django.contrib.auth import authenticate, login, logout
+import json
+
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
@@ -10,8 +12,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from typing import Optional
 
-from .serializers import *
-from .service import *
+from .models import Profile, User
+from .serializers import ProfileSerializer, SignInSerializer, SignUpSerializer, AvatarUploadSerializer
 
 
 class ProfileView(APIView):
@@ -171,13 +173,15 @@ class UpdateAvatarAPIView(APIView):
 
         profile, _ = Profile.objects.get_or_create(user=request.user)
         if profile.avatar:  # Если у профиля уже есть аватар
-            file_serializer = AvatarUploadSerializer(instance=profile.avatar, data=data)  # Обновляем существующий аватар
+            file_serializer = AvatarUploadSerializer(instance=profile.avatar,
+                                                     data=data)  # Обновляем существующий аватар
         else:
             file_serializer = AvatarUploadSerializer(data=data)  # Создаем новый аватар
         if file_serializer.is_valid():
             avatar_instance = file_serializer.save()
             if not avatar_instance.alt:  # Проверка на отсутствие значения в поле alt
-                avatar_instance.alt = avatar_instance.src.name.split('/')[-1].split('.')[0]  # Создаем значение для alt из имени файла
+                avatar_instance.alt = avatar_instance.src.name.split('/')[-1].split('.')[
+                    0]  # Создаем значение для alt из имени файла
                 avatar_instance.save()
             profile.avatar = avatar_instance  # Присваиваем профилю корректный экземпляр
             profile.save()
