@@ -9,6 +9,7 @@ from app_users.models import User
 class FilterReviewListSerializer(serializers.ListSerializer):
     """Фильтр комментариев комментариев, (parents), можно удалить"""
 
+    # Переопределяем формат данных, которые будут возвращены в ответе API:
     def to_representation(self, data: Any) -> List:
         data = data.filter(parent=None)  # Фильтрация отзывов без родителей (главные отзывы)
         return super().to_representation(data)  # Возвращаем репрезентацию с использованием родительского метода
@@ -17,6 +18,7 @@ class FilterReviewListSerializer(serializers.ListSerializer):
 class RecursiveSerializer(serializers.Serializer):
     """Для рекурсивного вывода категорий, если понадобится"""
 
+    # Переопределяем формат данных, которые будут возвращены в ответе API:
     def to_representation(self, value: Any) -> Any:
         serializer = self.parent.parent.__class__(value,
                                                   context=self.context)  # Создаем новый экз. текущего сериализатора
@@ -35,7 +37,7 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             'rate',
         )
 
-    def create(self, validated_data: dict) -> Review:
+    def create(self, validated_data: dict) -> Review:  # Создание или обновление отзыва
         review = Review.objects.update_or_create(
             product=validated_data.get('product', None),
             author=validated_data.get('author', None),
@@ -63,10 +65,10 @@ class ReviewSerializer(serializers.ModelSerializer):
     """
     author = serializers.SlugRelatedField(slug_field='username', read_only=True)
     date = serializers.DateTimeField(format='%Y-%m-%d %H:%M', read_only=True)
-    email = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()  # Получение email автора отзыва
 
     def get_email(self, obj) -> str:
-        return obj.author.email
+        return obj.author.email  # Возврат email автора отзыва
 
     class Meta:
         model = Review

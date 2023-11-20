@@ -56,16 +56,17 @@ class PrefixedBooleanFilter(filters.BooleanFilter):
     }
 
     def filter(self, qs: QuerySet, value: bool) -> QuerySet:
-        # Проверяем, есть ли у объекта-родителя self.parent атрибут request
+        # Получаем у объекта-родителя self.parent атрибут request
         request = getattr(self.parent, 'request', None)
         if request:
+            # Получение значения строки из GET-запроса по имени поля фильтрации:
             value_str = request.GET.get(f'filter[{self.field_name}]', None)
-            if value_str in self.BOOLEAN_MAP:
-                value = self.BOOLEAN_MAP[value_str]  # Получаем булево значение из строки
+            if value_str in self.BOOLEAN_MAP:  # Проверка наличия значения в словаре BOOLEAN_MAP
+                value = self.BOOLEAN_MAP[value_str]  # Получаем булево значение из строки, используя словарь BOOLEAN_MAP
             else:
                 return qs
 
-        return super().filter(qs, value)
+        return super().filter(qs, value)  # Родительский метод filter() с примененными значениями фильтрации
 
 
 class ProductFilter(FilterSet):
@@ -205,7 +206,7 @@ class ProductLimitedView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request: Request) -> Response:
-        products = ProductInstance.objects.filter_and_annotate()[:16]
+        products = ProductInstance.objects.filter_and_annotate()[:16]  # Получение первых 16 отаннотированных продуктов
         serializer = ProductListSerializer(products, many=True)
         return Response(serializer.data)
 
@@ -219,7 +220,7 @@ class ProductSalesView(ListAPIView):
     pagination_class = CustomPaginationProducts
 
     def get_queryset(self) -> QuerySet:
-        current_date = timezone.now().date()
+        current_date = timezone.now().date()  # Получение текущей даты
         queryset = ProductInstance.objects.filter(dateFrom__lte=current_date, dateTo__gte=current_date, available=True)
         return queryset
 
@@ -245,6 +246,7 @@ class ProductDetailView(APIView):
 
     def get(self, request: Request, pk: int) -> Response:
         product = ProductInstance.objects.filter_and_annotate(product_ids=[pk]).get(id=pk, available=True)
+        # Получение среднего рейтинга продукта на основе отзывов:
         average_rating = Review.objects.filter(product=product).aggregate(Avg('rate__value'))
 
         # Округляем средний рейтинг до одного десятичного знака

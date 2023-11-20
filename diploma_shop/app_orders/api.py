@@ -36,10 +36,10 @@ class BasketView(APIView):
         serializer = BasketItemSerializer(data=request.data)
         if serializer.is_valid():
             basket, created = Basket.objects.get_or_create(
-                user=request.user)  # Получаем или создаем корзину пользователя
+                user=request.user)  # Получаем или создаем корзину пользователя, сделавшего запрос
             product_id = serializer.validated_data['id']
             count = serializer.validated_data['count']
-            product = ProductInstance.objects.get(id=product_id)  # Получаем конкретный продукт
+            product = ProductInstance.objects.get(id=product_id)  # Получаем конкретный продукт по его id
 
             try:
                 basket_item = BasketItem.objects.get(basket=basket, product=product)  # Ищем продукт в корзине
@@ -50,10 +50,10 @@ class BasketView(APIView):
                                                         count=count)  # Создаем новый элемент корзины
                 # basket_item.save()
 
-            basket_item.save()
-            basket_items = basket.items2.all()
-            product_ids = basket_items.values_list('product_id', flat=True)
-            products = ProductInstance.objects.filter_and_annotate(product_ids)
+            basket_item.save()  # Сохранение изменений
+            basket_items = basket.items2.all()  # Получаем все элементы корзины пользователя
+            product_ids = basket_items.values_list('product_id', flat=True)  # Идентификаторы всех продуктов в корзине
+            products = ProductInstance.objects.filter_and_annotate(product_ids)  # Экземпляры продуктов с аннотациями
             serializer = BasketProductSerializer(products, many=True, context={'user': request.user})
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -61,21 +61,26 @@ class BasketView(APIView):
     def delete(self, request: Any) -> Response:
         serializer = BasketItemSerializer(data=request.data)
         if serializer.is_valid():
-            basket = Basket.objects.get(user=request.user)
-            product_id = serializer.validated_data['id']
-            count = serializer.validated_data['count']
+            basket = Basket.objects.get(user=request.user)  # Корзина пользователя
+            product_id = serializer.validated_data['id']  # Идентификатор продукта и количества из валидированных данных
+            count = serializer.validated_data['count']  # Количество продукта из валидированных данных
 
             try:
+                # Поиск элемента корзины для удаляемого продукта:
                 basket_item = BasketItem.objects.get(basket=basket, product_id=product_id)
             except BasketItem.DoesNotExist:
+                # Если продукт не найден в корзине, возврат 404
                 return Response({"error": "Product not found in basket"}, status=status.HTTP_404_NOT_FOUND)
 
             if basket_item.count == count:
+                # Удаление продукта из корзины, если количество совпадает
                 basket_item.delete()
             elif basket_item.count > count:
+                # Уменьшение количества продукта в корзине, если требуемое количество меньше, чем имеющееся
                 basket_item.count -= count
                 basket_item.save()
             else:
+                # Возврат 400, если требуемое количество больше, чем имеющееся в корзине
                 return Response({"error": "The basket contains fewer items than you're trying to remove"},
                                 status=status.HTTP_400_BAD_REQUEST)
 
@@ -87,11 +92,12 @@ class OrderAPIView(APIView):
     """
     Заказы
     """
-    parser_classes: List[Any] = [PlainListJSONParser]
+    parser_classes: List[Any] = [PlainListJSONParser]  # Определение используемых парсеров данных
     permission_classes: List[Any] = [permissions.IsAuthenticated]
     authentication_classes: List[Any] = [SessionAuthentication]
 
     def get(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+        # Получение всех заказов пользователя, привязанных к его корзине
         orders = Order.objects.filter(id=request.user.basket2.order.id)
         serializer = OrderSerializer(orders, many=True)
 
@@ -104,6 +110,7 @@ class OrderAPIView(APIView):
         try:
             basket = Basket.objects.get(user=user)  # получаем корзину пользователя
         except Basket.DoesNotExist:
+            # Возвращение 400, если у пользователя отсутствует корзина
             return Response({'error': 'User does not have a basket'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Если у пользователя уже есть корзина, просто создаем заказ и привязываем к этой корзине
@@ -120,15 +127,17 @@ class OrderDetailAPIView(RetrieveAPIView):
     queryset: QuerySet = Order.objects.all()
     serializer_class: Any = OrderDetailSerializer
 
-    # Маппинг строковых значений на числовые
+    # Маппинг строковых значений на числовые для типа доставки
     delivery_type_mapping: Dict[str, int] = {
         'Доставка': 1,
         'Экспресс-доставка': 2,
     }
+    # Маппинг строковых значений на числовые для типа оплаты
     payment_type_mapping: Dict[str, int] = {
         'Онлайн картой': 1,
         'Онлайн со случайного чужого счёта': 2,
     }
+    # Маппинг строковых значений на числовые для статуса заказа
     status_mapping: Dict[str, int] = {
         'ожидание платежа': 1,
         'оплачено': 2,
@@ -136,12 +145,14 @@ class OrderDetailAPIView(RetrieveAPIView):
 
     def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
         try:
-            order = self.get_object()  # получение объекта заказа по id
+            order = self.get_object()  # Получение объекта заказа по id
         except Http404:
+            # Возвращение 404, если заказ не найден
             return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        data = request.data  # данные, полученные из тела POST-запроса
+        data = request.data  # Данные, полученные из тела POST-запроса
 
+        # Обновление данных заказа, если они присутствуют в запросе
         if 'fullName' in data:
             order.basket.user.profile2.fullName = data['fullName']
         if 'email' in data:
@@ -188,13 +199,14 @@ class PaymentCardAPIView(generics.CreateAPIView):
             data.pop('csrfmiddlewaretoken', None)  # Удаляем csrfmiddlewaretoken
 
         serializer = self.get_serializer(data=data)
-        if not serializer.is_valid():
+        if not serializer.is_valid():  # Если данные не прошли валидацию сериализатора, то 400:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        number = serializer.validated_data.get('number')
+        number = serializer.validated_data.get('number')  # Получение номера карты
+        # Проверка на корректность номера карты (четное число, не более 8 цифр):
         if int(number) % 2 != 0 or len(str(number)) > 8:
             return Response({'error': 'Invalid card number'}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer.save(owner=request.user)
+        serializer.save(owner=request.user)  # Сохранение данных карты, привязанных к пользователю
 
         return Response(status=status.HTTP_200_OK)

@@ -56,7 +56,7 @@ class BasketProductSerializer(serializers.ModelSerializer):
             'reviews',
             'rating',
         )
-
+    # Переопределяем формат данных, которые будут возвращены в ответе API:
     def to_representation(self, instance: ProductInstance) -> Dict[str, Any]:
         """
         Если пользователь передан в контекст, ищем объект корзины для этого пользователя
@@ -135,19 +135,19 @@ class OrderSerializer(serializers.ModelSerializer):
         annotated_products_dict = {
             product.id: {'reviews': product.reviews_count, 'rating': product.average_rating}
             for product in annotated_products
-        }
-        product_data = []
-        # Создаем словарь, чтобы проверять, добавлен ли уже продукт в список
-        added_products = {}
+        }  #  Создаем словарь, где ключ - ID продукта, значение - словарь с аннотациями продукта
+        product_data = []  # Пустой список, в который будут добавляться данные о продуктах
+        added_products = {}  # Словарь, чтобы проверять, добавлен ли уже продукт в список
         for product in products:
-            # Если продукт уже добавлен, пропускаем его
+            # Если ID продукта уже есть в словаре добавленных, продолжаем со следующим продуктом:
             if product.id in added_products:
                 continue
             product_serialized = BasketProductSerializer(product).data  # Сериализуем каждый продукт
+            # Обновляем данные сериализованного продукта, добавляя аннотации (если они есть):
             product_serialized.update(annotated_products_dict.get(product.id, {'reviews': 0, 'rating': 0}))
+            # Добавляем сериализованный продукт в список product_data:
             product_data.append(product_serialized)
-            added_products[product.id] = True  # Отмечаем, что продукт добавлен
-
+            added_products[product.id] = True  # Отмечаем, что продукт был добавлен в список
         return product_data
 
     class Meta:
@@ -200,17 +200,18 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             product.id: {'reviews': product.reviews_count, 'rating': product.average_rating}
             for product in annotated_products
         }
-        product_data = []
-        # Создаем словарь, чтобы проверять, добавлен ли уже продукт в список
-        added_products = {}
+        product_data = []  # Пустой список, в который будут добавляться данные о продуктах
+        added_products = {}  # Создаем словарь, чтобы проверять, добавлен ли уже продукт в список
         for product in products:
             # Если продукт уже добавлен, пропускаем его
             if product.id in added_products:
                 continue
             product_serialized = BasketProductSerializer(product).data  # Сериализуем каждый продукт
+            # Обновляем данные сериализованного продукта, добавляя аннотации (если они есть):
             product_serialized.update(annotated_products_dict.get(product.id, {'reviews': 0, 'rating': 0}))
+            # Добавляем сериализованный продукт в список product_data:
             product_data.append(product_serialized)
-            added_products[product.id] = True  # Отмечаем, что продукт добавлен
+            added_products[product.id] = True  # Отмечаем, что продукт был добавлен в список
 
         return product_data
 
