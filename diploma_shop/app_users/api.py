@@ -18,7 +18,19 @@ from .serializers import ProfileSerializer, SignInSerializer, SignUpSerializer, 
 
 class ProfileView(APIView):
     """
-    Отображение, добавление и изменение профиля пользователя
+    Отображение, добавление и изменение профиля пользователя.
+
+    Methods:
+    - get: Получение профиля пользователя.
+    - post: Обновление или создание профиля пользователя.
+
+    Permissions:
+    - IsAuthenticated: Только аутентифицированным пользователям разрешен доступ.
+
+    Returns:
+    - 200 OK: Возвращает данные профиля пользователя.
+    - 201 Created: Возвращает данные профиля пользователя после успешного обновления или создания.
+    - 400 Bad Request: Возвращает ошибку, если запрос некорректен или данные профиля недействительны.
     """
     permission_classes = [permissions.IsAuthenticated]
     # permission_classes = [AllowAny]
@@ -26,6 +38,15 @@ class ProfileView(APIView):
     serializer_class = ProfileSerializer
 
     def get(self, request: Request) -> Response:
+        """
+        Получение профиля пользователя.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 200 OK: Возвращает данные профиля пользователя.
+        """
         try:  # Попытка получить профиль пользователя
             profile = Profile.objects.get(user=request.user)
         except ObjectDoesNotExist:
@@ -34,6 +55,16 @@ class ProfileView(APIView):
         return Response(serializer.data)
 
     def post(self, request: Request) -> Response:  # POST-метод для обновления профиля
+        """
+        Обновление или создание профиля пользователя.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 201 Created: Возвращает данные профиля пользователя после успешного обновления или создания.
+        - 400 Bad Request: Возвращает ошибку, если запрос некорректен или данные профиля недействительны.
+        """
         try:  # Попытка получить или создать профиль пользователя
             profile, created = Profile.objects.get_or_create(user=request.user)
             serializer = self.serializer_class(profile, data=request.data, partial=True)
@@ -47,13 +78,38 @@ class ProfileView(APIView):
 
 class SignInView(APIView):
     """
-    Вход
+    Аутентификация пользователя.
+
+    Methods:
+    - post: Аутентификация пользователя.
+
+    Authentication:
+    - SessionAuthentication: Аутентификация по сессии.
+
+    Permissions:
+    - AllowAny: Доступ без аутентификации.
+
+    Returns:
+    - 200 OK: Успешный вход.
+    - 400 Bad Request: Некорректный запрос или данные для входа.
+    - 500 Internal Server Error: Ошибка сервера при попытке входа.
     """
     authentication_classes = [SessionAuthentication]
     permission_classes = [AllowAny]
     serializer_class = SignInSerializer
 
     def post(self, request: Request) -> Response:
+        """
+        Аутентификация пользователя.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 200 OK: Успешный вход.
+        - 400 Bad Request: Некорректный запрос или данные для входа.
+        - 500 Internal Server Error: Ошибка сервера при попытке входа.
+        """
         try:
             # Пытаемся прочитать данные как JSON
             data = json.loads(list(request.POST.keys())[0])
@@ -81,7 +137,20 @@ class SignInView(APIView):
 
 class SignUpView(APIView):
     """
-    Регистрация
+    Регистрация нового пользователя.
+
+    Methods:
+    - post: Регистрация нового пользователя.
+
+    Authentication:
+    - SessionAuthentication: Аутентификация по сессии.
+
+    Permissions:
+    - AllowAny: Доступ без аутентификации.
+
+    Returns:
+    - 200 OK: Успешная регистрация нового пользователя.
+    - 500 Internal Server Error: Ошибка сервера при попытке регистрации.
     """
     permission_classes = [AllowAny]
     authentication_classes = [SessionAuthentication]
@@ -89,7 +158,16 @@ class SignUpView(APIView):
     User = get_user_model()
 
     def post(self, request: Request) -> Response:
+        """
+        Регистрация нового пользователя.
 
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 200 OK: Успешная регистрация нового пользователя.
+        - 500 Internal Server Error: Ошибка сервера при попытке регистрации.
+        """
         try:
             # Пытаемся прочитать данные как JSON
             data = json.loads(list(request.POST.keys())[0])
@@ -119,12 +197,30 @@ class SignUpView(APIView):
 
 class SignOutView(APIView):
     """
-    Выход из системы
+    Выход текущего пользователя из системы.
+
+    Methods:
+    - post: Выход текущего пользователя из системы.
+
+    Authentication:
+    - SessionAuthentication: Аутентификация по сессии.
+
+    Returns:
+    - 200 OK: Успешный выход из системы.
     """
     # permission_classes = [AllowAny]
     authentication_classes = [SessionAuthentication]
 
     def post(self, request: Request) -> Response:
+        """
+        Выход текущего пользователя из системы.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 200 OK: Успешный выход из системы.
+        """
         logout(request)
         # request.session.flush()  # Очистка сессии
         # cache.clear()
@@ -133,12 +229,35 @@ class SignOutView(APIView):
 
 class ChangePasswordAPIView(APIView):
     """
-    Смена пароля
+    Изменение пароля текущего пользователя.
+
+    Methods:
+    - post: Изменение пароля текущего пользователя.
+
+    Permissions:
+    - IsAuthenticated: Пользователь должен быть аутентифицирован.
+
+    Authentication:
+    - SessionAuthentication: Аутентификация по сессии.
+
+    Returns:
+    - 200 OK: Успешное изменение пароля.
+    - 400 Bad Request: Неверный текущий пароль.
     """
     permission_classes = [permissions.IsAuthenticated]
     authentication_classes = [SessionAuthentication]
 
     def post(self, request: Request) -> Response:
+        """
+        Изменение пароля текущего пользователя.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 200 OK: Успешное изменение пароля.
+        - 400 Bad Request: Неверный текущий пароль.
+        """
         current_password = request.data.get('currentPassword')
         new_password = request.data.get('newPassword')
         user = request.user
@@ -155,12 +274,38 @@ class ChangePasswordAPIView(APIView):
 
 
 class UpdateAvatarAPIView(APIView):
+    """
+    Обновление аватара пользователя.
+
+    Methods:
+    - post: Загрузка нового аватара или обновление текущего.
+
+    Permissions:
+    - IsAuthenticated: Пользователь должен быть аутентифицирован.
+
+    Authentication:
+    - SessionAuthentication: Аутентификация по сессии.
+
+    Returns:
+    - 201 Created: Успешно создан новый аватар.
+    - 400 Bad Request: Ошибка в запросе или в данных аватара.
+    """
     permission_classes = [permissions.IsAuthenticated]
     authentication_classes = [SessionAuthentication]
     serializer_class = AvatarUploadSerializer
     parser_classes = [FormParser, MultiPartParser]
 
     def post(self, request: Request) -> Response:
+        """
+        Загрузка нового аватара или обновление текущего.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 201 Created: Успешно создан новый аватар.
+        - 400 Bad Request: Ошибка в запросе или в данных аватара.
+        """
         # Создаем промежуточный словарь
         if request.data.get('avatar'):
             data = {

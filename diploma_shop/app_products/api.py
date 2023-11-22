@@ -1,8 +1,6 @@
 from django.db.models.query import QuerySet
-from django_filters.rest_framework import FilterSet, OrderingFilter, DjangoFilterBackend, CharFilter
 from django.db.models import Avg, Count
 from django.utils import timezone
-from django.http import QueryDict
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -10,105 +8,12 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
-from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
-from django.core.exceptions import FieldError
-from django_filters import rest_framework as filters
 
 from .models import ProductInstance, Review, Category, Tag
 from .serializers import ProductListSerializer, ProductSalesSerializer, ProductDetailSerializer, CategorySerializer, \
     TagSerializer, ReviewCreateSerializer
-from .service import CustomPaginationProducts
-
-
-class PrefixedNumberFilter(filters.NumberFilter):
-    """
-    Класс для конвертации строкового значения во float
-    """
-
-    #  Добавляем новый атрибут query_param к классу PrefixedNumberFilter
-    def __init__(self, *args, **kwargs):
-        self.query_param = kwargs.pop('query_param', None)  # Забираем query_param из аргументов
-        super().__init__(*args, **kwargs)
-
-    def filter(self, qs: QuerySet, value: float) -> QuerySet:
-        # Проверяем, есть ли у self.parent атрибут request
-        request = getattr(self.parent, 'request', None)  # Извлекаем атрибут 'request' из родительского объекта
-        if request and self.query_param:
-            value_str = request.GET.get(self.query_param, None)
-            if value_str is not None and value_str != '':  # Проверяем, что значение не пустое
-                try:
-                    value = float(value_str)  # Конвертируем строковое значение во float
-                except ValueError:
-                    return qs  # Возвращаем исходный QuerySet без изменений
-
-        return super().filter(qs, value)  # Если все в порядке, вызываем родительский метод filter
-
-
-class PrefixedBooleanFilter(filters.BooleanFilter):
-    """
-    Класс для конвертации строкового значения в булево
-    """
-    # Определение словаря для маппинга строковых значений в булевы
-    BOOLEAN_MAP = {
-        'true': True,
-        'false': False
-    }
-
-    def filter(self, qs: QuerySet, value: bool) -> QuerySet:
-        # Получаем у объекта-родителя self.parent атрибут request
-        request = getattr(self.parent, 'request', None)
-        if request:
-            # Получение значения строки из GET-запроса по имени поля фильтрации:
-            value_str = request.GET.get(f'filter[{self.field_name}]', None)
-            if value_str in self.BOOLEAN_MAP:  # Проверка наличия значения в словаре BOOLEAN_MAP
-                value = self.BOOLEAN_MAP[value_str]  # Получаем булево значение из строки, используя словарь BOOLEAN_MAP
-            else:
-                return qs
-
-        return super().filter(qs, value)  # Родительский метод filter() с примененными значениями фильтрации
-
-
-class ProductFilter(FilterSet):
-    """
-    Класс для фильтрации с параметрами фильтрации, например
-    /catalog?filter[name]=&filter[minPrice]=100&filter[maxPrice]=1000&filter[freeDelivery]=true
-    """
-    permission_classes = [AllowAny]
-    minPrice = PrefixedNumberFilter(field_name='price', lookup_expr='gte', query_param='filter[minPrice]')
-    maxPrice = PrefixedNumberFilter(field_name='price', lookup_expr='lte', query_param='filter[maxPrice]')
-    freeDelivery = PrefixedBooleanFilter(field_name='freeDelivery')
-    available = PrefixedBooleanFilter(field_name='available')
-    category = PrefixedNumberFilter(field_name='category__id')
-    property = CharFilter(field_name='specifications__value', lookup_expr='icontains')  # поиск по вх. без учёта рег.
-    name = CharFilter(field_name='title', lookup_expr='icontains')  # поиск по вхождению без учёта регистра символов
-
-    class Meta:
-        model = ProductInstance
-        fields = "__all__"
-
-
-class CustomOrderingFilter(OrderingFilter):
-    """
-    Класс для кастомной сортировки
-    """
-    # Словарь для маппинга полей сортировки
-    ordering_field_map = {
-        'reviews': 'reviews_count'
-    }
-
-    def filter_queryset(self, request: Request, queryset: QuerySet,
-                        view) -> QuerySet:  # Переопределение метода фильтрации по порядку
-        ordering = self.get_ordering(request, queryset, view)  # Получение параметров сортировки из запроса
-        if ordering:
-            # Применяем наше переопределение
-            ordering = [self.ordering_field_map.get(field, field) for field in
-                        ordering]  # Применяем маппинг полей сортировки
-            try:
-                return queryset.order_by(*ordering)  # Пытаемся отсортировать queryset
-            except FieldError:
-                pass
-        return queryset
+from .service import CustomPaginationProducts, ProductFilter, CustomOrderingFilter
 
 
 class ProductListView(ListAPIView):
@@ -127,8 +32,35 @@ class ProductListView(ListAPIView):
 
 class CatalogView(ListAPIView):
     """
-    Каталог с фильтрацией и сортировкой, пример:
+    Каталог товаров с возможностью фильтрации и сортировки.
 
+    Parameters:
+    - permission_classes (list): Разрешения для доступа к представлению.
+    - serializer_class: Сериализатор для сериализации данных товаров.
+    - pagination_class: Класс пагинации для кастомизации отображения страниц.
+    - filter_backends (tuple): Набор фильтров для обработки запросов.
+    - filterset_class: Класс фильтров для кастомизации фильтрации товаров.
+    - ordering_fields (list): Список полей для сортировки.
+    - ordering_field_map (dict): Словарь сопоставления полей для корректной сортировки.
+
+    Methods:
+    - get_ordering(): Метод для получения параметров сортировки.
+    - get_queryset(): Метод для получения набора данных товаров.
+
+    Query Parameters:
+    - filter[name] (str): Фильтр по имени товара.
+    - filter[minPrice] (int): Минимальная цена товара.
+    - filter[maxPrice] (int): Максимальная цена товара.
+    - filter[freeDelivery] (bool): Фильтр для бесплатной доставки товара.
+    - filter[available] (bool): Фильтр для доступности товара.
+    - sort (str): Параметр сортировки.
+    - sortType (str): Тип сортировки.
+    - currentPage (int): Номер текущей страницы.
+
+    Permissions:
+    - `AllowAny`: Разрешен доступ для всех пользователей.
+
+    Example:
     /catalog?filter[name]=&filter[minPrice]=0&filter[maxPrice]=24000&filter[freeDelivery]=true
     &filter[available]=true&currentPage=1&sort=price&sortType=dec&limit=20
 
@@ -145,35 +77,26 @@ class CatalogView(ListAPIView):
         'reviews': 'reviews_count'
     }
 
-    def get_ordering(self) -> list[str]:
-        ordering = super().get_ordering()
-        if ordering:  # Если параметры сортировки есть
-            ordering_field_map = {  # Словарь для переопределения полей сортировки
-                'reviews': 'reviews_count'
-            }
-            return [ordering_field_map.get(field, field) for field in ordering]  # Применяем маппинг полей сортировки
-        return ordering  # Или возвращаем исходные параметры сортировки
-
     def get_queryset(self) -> QuerySet:
+        """
+        Получает набор данных товаров с учетом параметров фильтрации и сортировки.
+
+        Returns:
+        - QuerySet: Набор данных товаров.
+
+        Example:
+        - Получает набор данных товаров с применением фильтров и сортировки.
+
+        """
         queryset = ProductInstance.objects.filter_and_annotate()
-        # name_filter = self.request.query_params.get('filter[name]', None)  # Получение фильтра по имени из запроса
-        name_filter = None
-        filter_param = self.request.query_params.get('filter', None)  # Получение фильтра по имени из запроса
-        if filter_param and '=' in filter_param:
-            name_filter = filter_param.split('=')[-1]
+        name_filter = self.request.query_params.get('filter[name]', None)  # Получение фильтра по имени из запроса
 
         # Фильтрация
-        filterset = ProductFilter(self.request.GET, queryset=queryset)  # Применение фильтров к набору данных
-        if filterset.is_valid():
-            queryset = filterset.qs  # Применяем фильтры к набору данных
-        else:
-            # Логирование ошибок фильтрации
-            print(filterset.errors)
         if name_filter:
             queryset = queryset.filter(title__icontains=name_filter)  # Применяем фильтр по имени, если он задан
 
         # Сортировка
-        current_page = self.request.query_params.get('currentPage', None)  # Текущая страница
+        # current_page = self.request.query_params.get('currentPage', None)  # Текущая страница
         sort = self.request.query_params.get('sort', None)  # Параметр сортировки
         sort_type = self.request.query_params.get('sortType', None)  # Тип сортировки
         # Перехват полей для сортировки
@@ -188,7 +111,20 @@ class CatalogView(ListAPIView):
 
 class ProductPopularView(APIView):
     """
-    Вывод списка топ-продуктов
+    Вывод списка топ-продуктов.
+
+    Methods:
+    GET - получение списка топ-продуктов.
+
+    Parameters:
+    Отсутствуют.
+
+    Permissions:
+    - `AllowAny`: Разрешен доступ для всех пользователей.
+
+    Returns:
+    Список топ-продуктов в формате JSON.
+
     """
     permission_classes = [AllowAny]
 
@@ -201,7 +137,20 @@ class ProductPopularView(APIView):
 
 class ProductLimitedView(APIView):
     """
-    Вывод списка продуктов с ограниченным тиражом
+    Вывод списка продуктов с ограниченным тиражом.
+
+    Methods:
+    GET - получение списка продуктов с ограниченным тиражом.
+
+    Parameters:
+    Отсутствуют.
+
+    Permissions:
+    - `AllowAny`: Разрешен доступ для всех пользователей.
+
+    Returns:
+    Список продуктов с ограниченным тиражом в формате JSON.
+
     """
     permission_classes = [AllowAny]
 
@@ -213,7 +162,20 @@ class ProductLimitedView(APIView):
 
 class ProductSalesView(ListAPIView):
     """
-    Вывод списка продуктов по распродаже
+    Вывод списка продуктов по распродаже.
+
+    Methods:
+    GET - получение списка продуктов по распродаже.
+
+    Parameters:
+    Отсутствуют.
+
+    Permissions:
+    - `AllowAny`: Разрешен доступ для всех пользователей.
+
+    Returns:
+    Список продуктов, участвующих в распродаже, в формате JSON.
+
     """
     permission_classes = [AllowAny]
     serializer_class = ProductSalesSerializer
@@ -227,7 +189,20 @@ class ProductSalesView(ListAPIView):
 
 class ProductBannersView(APIView):
     """
-    Вывод баннера из списка топ-продуктов
+    Вывод баннера из списка топ-продуктов.
+
+    Methods:
+    GET - получение баннера.
+
+    Parameters:
+    Отсутствуют.
+
+    Permissions:
+    - `AllowAny`: Разрешен доступ для всех пользователей.
+
+    Returns:
+    Баннеры, основанные на списке топ-продуктов, в формате JSON.
+
     """
     permission_classes = [AllowAny]
 
@@ -240,11 +215,36 @@ class ProductBannersView(APIView):
 
 class ProductDetailView(APIView):
     """
-    Вывод одного конкретного продукта
+    Вывод информации о конкретном продукте.
+
+    Methods:
+    GET - получение информации о продукте по его идентификатору.
+
+    Parameters:
+    - pk (int): Идентификатор конкретного продукта.
+
+    Permissions:
+    - `AllowAny`: Разрешен доступ для всех пользователей.
+
+    Returns:
+    Информация о конкретном продукте, включая средний рейтинг,
+    в формате JSON.
+
     """
     permission_classes = [AllowAny]
 
     def get(self, request: Request, pk: int) -> Response:
+        """
+        Получение информации о конкретном продукте.
+
+        Parameters:
+        - request (Request): Объект запроса.
+        - pk (int): Идентификатор конкретного продукта.
+
+        Returns:
+        Информация о продукте в формате JSON.
+
+        """
         product = ProductInstance.objects.filter_and_annotate(product_ids=[pk]).get(id=pk, available=True)
         # Получение среднего рейтинга продукта на основе отзывов:
         average_rating = Review.objects.filter(product=product).aggregate(Avg('rate__value'))
@@ -265,11 +265,33 @@ class ProductDetailView(APIView):
 
 class CategoryView(APIView):
     """
-    Вывод категорий продуктов
+    Класс для вывода списка категорий продуктов.
+
+    Methods:
+    - get: Получение списка категорий продуктов.
+
+    Parameters:
+    - request (Request): Объект запроса.
+
+    Permissions:
+    - AllowAny: Разрешение на доступ без аутентификации.
+
+    Returns:
+    Категории продуктов в формате JSON.
     """
     permission_classes = [AllowAny]
 
     def get(self, request: Request) -> Response:
+        """
+        Получение списка категорий продуктов.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        Категории продуктов в формате JSON.
+
+        """
         category = Category.objects.all()
         serializer = CategorySerializer(category, many=True)
         return Response(serializer.data)
@@ -277,11 +299,32 @@ class CategoryView(APIView):
 
 class TagsView(APIView):
     """
-    Вывод тегов продуктов
+    Класс для вывода тегов продуктов.
+
+    Methods:
+    - get: Получение списка тегов продуктов.
+
+    Parameters:
+    - request (Request): Объект запроса.
+
+    Permissions:
+    - AllowAny: Разрешение на доступ без аутентификации.
+
+    Returns:
+    Теги продуктов в формате JSON.
     """
     permission_classes = [AllowAny]
 
     def get(self, request: Request) -> Response:
+        """
+        Получение списка тегов продуктов.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        Теги продуктов в формате JSON.
+        """
         tags = Tag.objects.all()
         serializer = TagSerializer(tags, many=True)
         return Response(serializer.data)
@@ -289,7 +332,21 @@ class TagsView(APIView):
 
 class ReviewCreateView(APIView):
     """
-    Добавление отзыва продукту
+    Класс для добавления отзыва продукту.
+
+    Methods:
+    - post: Создание отзыва для указанного продукта.
+
+    Parameters:
+    - request (Request): Объект запроса.
+    - pk (int): ID продукта, для которого добавляется отзыв.
+
+    Permissions:
+    - IsAuthenticated: Только аутентифицированным пользователям разрешено добавлять отзывы.
+
+    Returns:
+    - 201 Created: Отзыв успешно создан.
+    - 400 Bad Request: Некорректный запрос или данные для создания отзыва.
     """
     permission_classes = [permissions.IsAuthenticated]
     # permission_classes = [AllowAny]
@@ -297,6 +354,17 @@ class ReviewCreateView(APIView):
     serializer_class = ReviewCreateSerializer
 
     def post(self, request: Request, pk: int) -> Response:
+        """
+        Создание отзыва для указанного продукта.
+
+        Parameters:
+        - request (Request): Объект запроса.
+        - pk (int): ID продукта, для которого добавляется отзыв.
+
+        Returns:
+        - 201 Created: Отзыв успешно создан.
+        - 400 Bad Request: Некорректный запрос или данные для создания отзыва.
+        """
         author = self.request.user
         review = ReviewCreateSerializer(data=request.data)
         product = ProductInstance.objects.get(id=pk, available=True)

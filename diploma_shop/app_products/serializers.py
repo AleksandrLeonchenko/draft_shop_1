@@ -16,7 +16,7 @@ class FilterReviewListSerializer(serializers.ListSerializer):
 
 
 class RecursiveSerializer(serializers.Serializer):
-    """Для рекурсивного вывода категорий, если понадобится"""
+    """Для рекурсивного вывода категорий"""
 
     # Переопределяем формат данных, которые будут возвращены в ответе API:
     def to_representation(self, value: Any) -> Any:

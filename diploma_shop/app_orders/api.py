@@ -19,12 +19,38 @@ from app_products.models import ProductInstance
 
 class BasketView(APIView):
     """
-    Корзина
+    Управление содержимым корзины пользователя.
+
+    Methods:
+    - get: Получить содержимое корзины пользователя.
+    - post: Добавить продукт в корзину.
+    - delete: Удалить продукт(ы) из корзины.
+
+    Permissions:
+    - IsAuthenticated: Пользователь должен быть аутентифицирован.
+
+    Authentication:
+    - SessionAuthentication: Аутентификация по сессии.
+
+    Returns:
+    - 200 OK: Успешное получение, добавление или удаление данных корзины.
+    - 204 No Content: Успешное удаление элементов корзины.
+    - 400 Bad Request: Ошибка в запросе или данных.
+    - 404 Not Found: Не найден продукт в корзине.
     """
     permission_classes: List[Any] = [permissions.IsAuthenticated]
     authentication_classes: List[Any] = [SessionAuthentication]
 
     def get(self, request: Any) -> Response:
+        """
+        Получить содержимое корзины пользователя.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 200 OK: Успешное получение содержимого корзины.
+        """
         basket = get_object_or_404(Basket, user=request.user)  # Получаем корзину текущего пользователя
         basket_items = basket.items2.all()  # Получаем все элементы корзины
         product_ids = basket_items.values_list('product_id', flat=True)  # Получаем ID всех продуктов в корзине
@@ -33,6 +59,16 @@ class BasketView(APIView):
         return Response(serializer.data)
 
     def post(self, request: Any) -> Response:
+        """
+        Добавить продукт в корзину.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 200 OK: Успешное добавление продукта в корзину.
+        - 400 Bad Request: Ошибка в запросе или данных.
+        """
         serializer = BasketItemSerializer(data=request.data)
         if serializer.is_valid():
             basket, created = Basket.objects.get_or_create(
@@ -59,6 +95,17 @@ class BasketView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request: Any) -> Response:
+        """
+        Удалить продукт(ы) из корзины.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 204 No Content: Успешное удаление продукта(ов) из корзины.
+        - 400 Bad Request: Ошибка в запросе или данных.
+        - 404 Not Found: Не найден продукт в корзине.
+        """
         serializer = BasketItemSerializer(data=request.data)
         if serializer.is_valid():
             basket = Basket.objects.get(user=request.user)  # Корзина пользователя
@@ -90,21 +137,60 @@ class BasketView(APIView):
 
 class OrderAPIView(APIView):
     """
-    Заказы
+    Управление заказами пользователя.
+
+    Methods:
+    - get: Получить заказы пользователя.
+    - post: Создать новый заказ пользователя.
+
+    Parser Classes:
+    - PlainListJSONParser: Используемый парсер данных.
+
+    Permissions:
+    - IsAuthenticated: Пользователь должен быть аутентифицирован.
+
+    Authentication:
+    - SessionAuthentication: Аутентификация по сессии.
+
+    Returns:
+    - 200 OK: Успешное получение заказов пользователя.
+    - 201 Created: Успешное создание нового заказа.
+    - 400 Bad Request: Ошибка в запросе или данных.
     """
     parser_classes: List[Any] = [PlainListJSONParser]  # Определение используемых парсеров данных
     permission_classes: List[Any] = [permissions.IsAuthenticated]
     authentication_classes: List[Any] = [SessionAuthentication]
 
     def get(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+        """
+        Получить заказы пользователя.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 200 OK: Успешное получение заказов пользователя.
+        """
         # Получение всех заказов пользователя, привязанных к его корзине
         orders = Order.objects.filter(id=request.user.basket2.order.id)
         serializer = OrderSerializer(orders, many=True)
 
         return Response(serializer.data)
 
-    @transaction.atomic  # использование транзакции для обеспечения целостности данных
+    @transaction.atomic
+    # использование транзакции в методе "post" гарантирует, что создание заказа и
+    # привязка его к корзине будут выполнены как атомарная операция
     def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+        """
+        Создать новый заказ пользователя.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 201 Created: Успешное создание нового заказа.
+        - 400 Bad Request: Ошибка в запросе или данных.
+        """
         user = request.user
 
         try:
@@ -120,7 +206,24 @@ class OrderAPIView(APIView):
 
 class OrderDetailAPIView(RetrieveAPIView):
     """
-    Заказ
+    Получение и обновление информации о заказе.
+
+    Methods:
+    - post: Обновление информации о заказе.
+
+    Permissions:
+    - IsAuthenticated: Пользователь должен быть аутентифицирован.
+
+    Authentication:
+    - SessionAuthentication: Аутентификация по сессии.
+
+    Attributes:
+    - queryset (QuerySet): Запрос для получения всех объектов заказов.
+    - serializer_class: Сериализатор для заказов.
+
+    Returns:
+    - 200 OK: Успешное обновление информации о заказе.
+    - 404 Not Found: Заказ не найден.
     """
     permission_classes: List[Any] = [permissions.IsAuthenticated]
     authentication_classes: List[Any] = [SessionAuthentication]
@@ -144,6 +247,16 @@ class OrderDetailAPIView(RetrieveAPIView):
     }
 
     def post(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+        """
+        Обновление информации о заказе.
+
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 200 OK: Успешное обновление информации о заказе.
+        - 404 Not Found: Заказ не найден.
+        """
         try:
             order = self.get_object()  # Получение объекта заказа по id
         except Http404:
@@ -182,14 +295,39 @@ class OrderDetailAPIView(RetrieveAPIView):
 
 class PaymentCardAPIView(generics.CreateAPIView):
     """
-    Оплата (карта оплаты)
+    Создание информации о платежной карте пользователя для оплаты.
+
+    Methods:
+    - create: Создание информации о платежной карте.
+
+    Permissions:
+    - IsAuthenticated: Пользователь должен быть аутентифицирован.
+
+    Authentication:
+    - SessionAuthentication: Аутентификация по сессии.
+
+    Attributes:
+    - serializer_class: Сериализатор для платежной карты.
+
+    Returns:
+    - 200 OK: Успешное создание информации о платежной карте.
+    - 400 Bad Request: Некорректные данные или неверный формат номера карты.
     """
     permission_classes: List[Any] = [permissions.IsAuthenticated]
     authentication_classes: List[Any] = [SessionAuthentication]
     serializer_class: Any = PaymentCardSerializer
 
     def create(self, request: Any, *args: Any, **kwargs: Any) -> Response:
+        """
+        Создание информации о платежной карте пользователя для оплаты.
 
+        Parameters:
+        - request (Request): Объект запроса.
+
+        Returns:
+        - 200 OK: Успешное создание информации о платежной карте.
+        - 400 Bad Request: Некорректные данные или неверный формат номера карты.
+        """
         try:
             # Пытаемся прочитать данные как JSON
             data = json.loads(list(request.POST.keys())[0])
